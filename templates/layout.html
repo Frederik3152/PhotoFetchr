@@ -1,21 +1,68 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-<!DOCTYPE html>
-<html>
-<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Vælg filtre</title>
+    <style>
+        header {
+            position: relative;
+            font-size: 24px;
+            left: 200px;
+            top: 50px;
+        }
+        footer {
+            position: absolute;
+            bottom: 10px;
+            left: 750px;
+        }
+        /* input {
+            position: absolute;
+            top: 800px;
+            left: 1600px;
+        } */
+        #submit {
+            position: absolute;
+            top: 600px;
+            left: 1600px;
+        }
+        #start_date {
+            position: relative;
+            top: 100px;
+            left: 450px;
+        }
+        #end_date {
+            position: relative;
+            top: 100px; 
+            left: 500px; 
+        }
+        label {
+            position: relative;
+            left: 200px;
+            top: 100px;
+        }
+        select {
+            position: relative;
+            left: 275px;
+            top: 100px;
+        }
+        button {
+            position: relative;
+            left: 200px;
+            top: 125px;
+        }
+       
+    </style>
 </head>
 <body>
+    <header>
+        Afgræns valg af billeder fra database
+    </header>
     <form method="POST" action="/filter_images" id="filter-form">
-        <label for="person_name">Select Person Name:</label>
+        
+        <label for="person_name">Hvem skal være på billederne?:</label>
         <select name="person_name" id="person_name">
             {% for person in people %}
                 <option value="{{ person[0] }}">{{ person[0] }}</option>
@@ -24,15 +71,29 @@
 
         <div id="additional-filters">
             <!-- Additional dropdowns will be added here dynamically -->
+                <!-- Options for the additional filter -->
+            </select>
         </div>
-
-        <button type="button" id="add-filter">Add Filter</button>
-
-        <input type="submit" value="Filter Images">
-
+        
+        <button type="button" id="add-filter">Tilføj endnu en person</button>
+        
         <input type="hidden" name="filter_count" id="filter_count" value="1">
+        
+        <input type="submit" id="submit" value="Vælg filtre">
+
+        <!-- <label for="start_date">Start Date:</label>
+        <input type="date" name="start_date" id="start_date">
+        
+        <label for="end_date">End Date:</label>
+        <input type="date" name="end_date" id="end_date"> -->
+
 
     </form>
+    <footer>
+        <div class="container text-center">
+            &copy; 2023 Frederik Tørnstrøm. All rights reserved.
+        </div>
+    </footer>
 </body>
 </html>
 
@@ -44,7 +105,7 @@
   function createFilter() {
       const newFilter = document.createElement("div");
       newFilter.innerHTML = `
-          <label for="filter_${filterCount}">Select Filter:</label>
+          <label for="filter_${filterCount}">Hvem skal også være på billederne:</label>
           <select name="filter_${filterCount}" id="filter_${filterCount}">
             {% for person in people %}
                 <option value="{{ person[0] }}">{{ person[0] }}</option>

@@ -3,6 +3,8 @@ from flask import Flask, render_template, request, Response
 import psycopg2
 from PIL import Image
 from io import BytesIO
+from datetime import date
+from country_mapping import country_mapping
 
 app = Flask(__name__)
 
@@ -23,23 +25,64 @@ def get_people():
     conn.close()
     return people_list
 
+# Function to select unique countries from database
+def get_country():
+    conn = psycopg2.connect(**db_config)
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT country FROM pi_data.pictures")
+    country_list = [country[0] for country in cur.fetchall()]
+    conn.close()
+    return country_list
+
 # Main screen for querying the database
 @app.route('/', methods=['GET'])
 def dropdown():
     people_list = get_people()
-    return render_template('layout.html', people=people_list)
+    country_list = get_country()
+    country_codes = [country_mapping.get(name) for name in country_list if country_mapping.get(name)]
+    data_countries = ','.join(country_codes)
+    return render_template('layout.html', people=people_list, data_countries=data_countries)
 
 # Route for images display
 @app.route('/filter_images', methods=['POST'])
 def filter_images():
+    # Extract the start and end date variables from the form
+    start_date = request.form['start_date']
+    end_date = request.form['end_date']
+
+    # Set potential default values
+    default_start_date = '1999-01-01' 
+    default_end_date = date.today()
+
+    # Check if start_date is not chosen or is an empty string
+    if not start_date:
+        start_date = default_start_date
+
+    # Check if end_date is not chosen or is an empty string
+    if not end_date:
+        end_date = default_end_date
+
+    # Get the list of selected country codes from the submitted form
+    selected_countries = request.form.getlist('countries')
+
+    # Create a reverse mapping where keys are country codes and values are country names
+    reverse_country_mapping = {v: k for k, v in country_mapping.items()}
+
+    # Use the reverse mapping to convert the list of selected country codes back to country names
+    selected_country_names = [reverse_country_mapping.get(code) for code in selected_countries]
+
+    # Convert the list to a comma-separated string
+    selected_country_names = "', '".join(selected_country_names)
+
+    # Get the filter count variable from the javascript function, counting how many person filters where inserted
     filter_values = []
     filter_count = request.form.get("filter_count")
-
-    # Extract values from the default filter
+    
+    # Extract values from the default person filter
     person_name = request.form['person_name']
     filter_values.append(f"PE1.name = '{person_name}'")
 
-    # Extract values from dynamically added filters
+    # Extract values from dynamically added person filters
     for filter_id in range(2, int(filter_count)+2):
         filter_value = request.form.get(f'filter_{filter_id - 1}')
         if filter_value:
@@ -57,6 +100,8 @@ def filter_images():
     # Append the "WHERE" and "PE{i}" filters
     query_parts.append("WHERE 1 = 1 AND")
     query_parts.extend(filter_values)   
+    query_parts.append(f"AND PIC.photo_taken BETWEEN '{start_date}' AND '{end_date}'")
+    query_parts.append(f"AND PIC.country IN ('{selected_country_names}')")
 
     # Build the SQL query from dynamic query parts
     sql_query = f"""

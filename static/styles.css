@@ -1,0 +1,72 @@
+/* styles.css */
+header {
+  position: absolute;
+  font-size: 24px;
+  left: 200px;
+  top: 50px;
+}
+footer {
+  position: absolute;
+  bottom: 10px;
+  left: 420px;
+}
+#submit {
+  position: absolute;
+  top: 600px;
+  left: 1600px;
+}
+#start_date {
+  position: absolute;
+  top: 100px;
+  left: 850px;
+}
+#start_date_label {
+  position: absolute;
+  top: 100px; 
+  left: 750px; 
+}
+#end_date {
+  position: absolute;
+  top: 150px; 
+  left: 850px; 
+}
+#end_date_label {
+  position: absolute;
+  top: 150px; 
+  left: 750px; 
+}
+label {
+  position: relative;
+  left: 200px;
+  top: 100px;
+}
+#person_name {
+  position: absolute;
+  left: 462px;
+  top: 100px;
+}
+#add-filter {
+  position: relative;
+  left: 200px;
+  top: 125px;
+}
+#remove-filter {
+  position: relative;
+  left: 200px;
+  top: 125px;
+}
+.custom-dropdown select {
+  position: relative;
+  left: 220px;
+  top: 100px;
+}
+.dropdown-menu {
+  left: 800px;
+  top: 75px;
+}
+.bootstrap-select button {
+  left: 800px;
+  top: 75px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

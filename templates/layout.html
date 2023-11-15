@@ -8,90 +8,17 @@
     <link rel="stylesheet" href="//cdn.tutorialjinni.com/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="//cdn.tutorialjinni.com/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
     <link rel="stylesheet" href="//g.tutorialjinni.com/mojoaxel/bootstrap-select-country/dist/css/bootstrap-select-country.min.css" />
-
+    <link rel="stylesheet" href="../static/styles.css">
+    
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Vælg filtre</title>
-    <style>
-        header {
-            position: absolute;
-            font-size: 24px;
-            left: 200px;
-            top: 50px;
-        }
-        footer {
-            position: absolute;
-            bottom: 10px;
-            left: 420px;
-        }
-        #submit {
-            position: absolute;
-            top: 600px;
-            left: 1600px;
-        }
-        #start_date {
-            position: absolute;
-            top: 100px;
-            left: 850px;
-        }
-        #start_date_label {
-            position: absolute;
-            top: 100px; 
-            left: 750px; 
-        }
-        #end_date {
-            position: absolute;
-            top: 150px; 
-            left: 850px; 
-        }
-        #end_date_label {
-            position: absolute;
-            top: 150px; 
-            left: 750px; 
-        }
-        label {
-            position: relative;
-            left: 200px;
-            top: 100px;
-        }
-        #person_name {
-            position: absolute;
-            left: 462px;
-            top: 100px;
-        }
-        #add-filter {
-            position: relative;
-            left: 200px;
-            top: 125px;
-        }
-        #remove-filter {
-            position: relative;
-            left: 200px;
-            top: 125px;
-        }
-        .custom-dropdown select {
-            position: relative;
-            left: 220px;
-            top: 100px;
-        }
-        .dropdown-menu {
-            left: 800px;
-            top: 75px;
-        }
-        .bootstrap-select button {
-            left: 800px;
-            top: 75px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-    </style>
 </head>
 <body>
     <header>
         Afgræns valg af billeder fra database
     </header>
     <form method="POST" action="/filter_images" id="filter-form">
-        
         <label for="person_name">Hvem skal være på billederne?:</label>
         <select name="person_name" id="person_name">
             {% for person in people %}
@@ -121,8 +48,7 @@
             data-flag="true" 
             data-countries="{{ data_countries }}" 
             data-default="{{ data_countries }}"
-            multiple></select>
-
+            multiple></select> 
     </form>
     <footer>
         <div class="container text-center">
@@ -133,51 +59,9 @@
 </html>
 
 <script>
-  // Counter for unique dropdown IDs
-  let filterCount = 1;
-
-  // Function to update the filter count
-  function updateFilterCount() {
-  document.getElementById("filter_count").value = filterCount;
-  }
-
-  // Function to create a new dropdown filter
-  function createFilter() {
-      const newFilter = document.createElement("div");
-
-      newFilter.classList.add("custom-dropdown");
-      newFilter.innerHTML = `
-          <label id="filter-label" for="filter_${filterCount}">Hvem skal også være på billederne:</label>
-          <select name="filter_${filterCount}" id="filter_${filterCount}">
-            {% for person in people %}
-                <option value="{{ person[0] }}">{{ person[0] }}</option>
-            {% endfor %}
-          </select>
-      `;
-      document.getElementById("additional-filters").appendChild(newFilter);
-      filterCount++;
-      updateFilterCount();
-
-  }
-
-  // Function to remove the last filter
-  function removeFilter() {
-    const additionalFilters = document.getElementById("additional-filters");
-    const lastFilter = additionalFilters.lastElementChild;
-    if (lastFilter) {
-      additionalFilters.removeChild(lastFilter);
-      filterCount--;
-      updateFilterCount();
-    }
-  }
-
-  // Event listener for the "Add Filter" button
-  document.getElementById("add-filter").addEventListener("click", createFilter);
-
-  // Event listener for the "Remove Last Filter" button
-  document.getElementById("remove-filter").addEventListener("click", removeFilter);
-
+    var people = {{ people | tojson }};
 </script>
+<script src="../static/scripts.js"></script>
 
 <!-- Tutorialjinni/boostrap javascrip (for flag dropdown) -->
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>

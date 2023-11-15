@@ -6,7 +6,7 @@ from io import BytesIO
 from datetime import date
 from country_mapping import country_mapping
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 # Database configuration
 db_config = {

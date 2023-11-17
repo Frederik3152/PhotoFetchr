@@ -4,7 +4,6 @@ import psycopg2
 from PIL import Image
 from io import BytesIO
 from datetime import date
-from country_mapping import country_mapping
 
 app = Flask(__name__, static_folder='static')
 
@@ -39,13 +38,12 @@ def get_country():
 def dropdown():
     people_list = get_people()
     country_list = get_country()
-    country_codes = [country_mapping.get(name) for name in country_list if country_mapping.get(name)]
-    data_countries = ','.join(country_codes)
-    return render_template('layout.html', people=people_list, data_countries=data_countries)
+    return render_template('layout.html', people=people_list, countries=country_list)
 
 # Route for images display
 @app.route('/filter_images', methods=['POST'])
 def filter_images():
+    ################### Date filters ##########################
     # Extract the start and end date variables from the form
     start_date = request.form['start_date']
     end_date = request.form['end_date']
@@ -62,46 +60,43 @@ def filter_images():
     if not end_date:
         end_date = default_end_date
 
+    ################### Country filters ##########################
     # Get the list of selected country codes from the submitted form
-    selected_countries = request.form.getlist('countries')
+    selected_countries = request.form.getlist('countryfilter')
 
-    # Create a reverse mapping where keys are country codes and values are country names
-    reverse_country_mapping = {v: k for k, v in country_mapping.items()}
-
-    # Use the reverse mapping to convert the list of selected country codes back to country names
-    selected_country_names = [reverse_country_mapping.get(code) for code in selected_countries]
-
+    country_list = get_country()
     # Convert the list to a comma-separated string
-    selected_country_names = "', '".join(selected_country_names)
+    if not selected_countries:
+        selected_country_names = "', '".join(country_list) 
+    else:
+        selected_country_names = "', '".join(selected_countries) 
 
-    # Get the filter count variable from the javascript function, counting how many person filters where inserted
+    ################### People filters ##########################
+    # Create the filter_values list
     filter_values = []
-    filter_count = request.form.get("filter_count")
-    
-    # Extract values from the default person filter
-    person_name = request.form['person_name']
-    filter_values.append(f"PE1.name = '{person_name}'")
-
-    # Extract values from dynamically added person filters
-    for filter_id in range(2, int(filter_count)+2):
-        filter_value = request.form.get(f'filter_{filter_id - 1}')
-        if filter_value:
-            alias = f"AND PE{filter_id}"
-            filter_values.append(f"{alias}.name = '{filter_value}'")
-
-    # Construct the SQL query based on selected filters
     query_parts = []
 
-    for i in range(1, int(filter_count)+1):
-        alias = f"PE{i}"
-        query_parts.append(f"INNER JOIN pi_data.person_picture AS PP{i} ON PP{i}.pictureid = PIC.id")
-        query_parts.append(f"INNER JOIN pi_data.people AS {alias} ON {alias}.id = PP{i}.peopleid")
+    # Extract values from the people filter
+    selected_people = request.form.getlist('peoplefilter')
 
-    # Append the "WHERE" and "PE{i}" filters
+    # Extract values from dynamically added person filters
+    for i in range(len(selected_people)):
+        alias = f"PE{i+1}"
+        filter_values.append(f"{alias}.name = '{selected_people[i-1]}' AND")
+        query_parts.append(f"INNER JOIN pi_data.person_picture AS PP{i+1} ON PP{i+1}.pictureid = PIC.id")
+        query_parts.append(f"INNER JOIN pi_data.people AS {alias} ON {alias}.id = PP{i+1}.peopleid")
+    
+    ################### Text box filter ##########################
+    user_string = request.form['tekst-box']
+
+    # Append the filters from above
+    # And construct the SQL query based on selected filters
     query_parts.append("WHERE 1 = 1 AND")
     query_parts.extend(filter_values)   
-    query_parts.append(f"AND PIC.photo_taken BETWEEN '{start_date}' AND '{end_date}'")
+    query_parts.append(f"PIC.photo_taken BETWEEN '{start_date}' AND '{end_date}'")
     query_parts.append(f"AND PIC.country IN ('{selected_country_names}')")
+    if user_string:
+        query_parts.append(f"AND PIC.file_name LIKE '%{user_string}%'")
 
     # Build the SQL query from dynamic query parts
     sql_query = f"""

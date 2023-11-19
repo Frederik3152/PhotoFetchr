@@ -12,8 +12,9 @@
 
 </head>
 <body>
+<main>
 <div class="container-fluid">
-  <div class="vid-filter">
+  <div class="filter-class">
     <div class="filter-bar">
       <button class="filter-btn"><i class="fa fa-filter" aria-hidden="true"></i> Vælg Filtre</button>
     </div>
@@ -56,10 +57,33 @@
           </div>
         </div>
     </div>
-        <input type="submit" id="submit" value="Se billeder">
+  </div>
+</div>
+<section class="welcome-section">
+  <div class="container">
+      <h1>Velkommen til PhotoFetchr </h1>
+      <p>Denne hjemmeside er tiltænkt som en grafisk indgang i mit billedeprojekt. Formålet er at skabe en struktureret oversigt, organisere og præsentere en samling af billeder.</p>
+  </div>
+</section>
+
+<div class="container">
+  <div class="button-container">
+    <button type="button" class="button">
+        <i class="fa fa-question-circle"></i>
+        <span>Hvordan virker det?</span>
+    </button>
+    <button type="button" class="button">
+        <i class="fa fa-random"></i>
+        <span>Vis mig et tilfældigt billede</span>
+    </button>
+    <button class="button">
+        <i class="fa fa-filter"></i>
+        <span>Vis billeder fra filtre</span>
+    </button>
   </div>
 </div>
 </form>
+</main>
 <footer>
     <div class="container text-center">
         &copy; 2023 Frederik Tørnstrøm. All rights reserved.
@@ -67,6 +91,5 @@
 </footer>
 
 <script src="../static/scripts.js"></script>
-
 </body>
 </html>

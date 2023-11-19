@@ -96,7 +96,7 @@ def filter_images():
     query_parts.append(f"PIC.photo_taken BETWEEN '{start_date}' AND '{end_date}'")
     query_parts.append(f"AND PIC.country IN ('{selected_country_names}')")
     if user_string:
-        query_parts.append(f"AND PIC.file_name LIKE '%{user_string}%'")
+        query_parts.append(f"AND LOWER(PIC.file_name) LIKE LOWER('%{user_string}%')")
 
     # Build the SQL query from dynamic query parts
     sql_query = f"""

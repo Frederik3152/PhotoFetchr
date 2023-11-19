@@ -3,7 +3,7 @@
         $(".filter-btn").click(function(){
             $(".filter-form").fadeToggle('slow', function(){
                 // // Toggle the visibility of the submit button and footer
-                $("#submit, footer").toggle();
+                $("#submit, footer, .welcome-section, .button").toggle();
             });
         });
     });

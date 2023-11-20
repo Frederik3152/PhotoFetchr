@@ -1,5 +1,5 @@
 # Import libraries
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, jsonify
 import psycopg2
 from PIL import Image
 from io import BytesIO
@@ -114,6 +114,17 @@ def filter_images():
 
     enumerated_images = [(i, image_id[0]) for i, image_id in enumerate(results)]
     return render_template('result.html', enumerated_images=enumerated_images)
+
+# Implement the random picture button by fetching a random ID from the database and 
+# loading image from render_image function through a new route
+@app.route('/random-pic')
+def random_picture():
+    conn = psycopg2.connect(**db_config)
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM pi_data.pictures ORDER BY RANDOM() LIMIT 1")
+    random_image = cur.fetchone()[0]
+    random_image_url = (f"/image/{random_image}")
+    return jsonify({"imageUrl": random_image_url})
 
 # Function to query the image binary content and retrieve it
 def get_image_from_database(image_id):

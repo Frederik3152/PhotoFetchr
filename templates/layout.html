@@ -62,7 +62,7 @@
 <section class="welcome-section">
   <div class="container">
       <h1>Velkommen til PhotoFetchr </h1>
-      <p>Denne hjemmeside er tiltænkt som en grafisk indgang i mit billedeprojekt. Formålet er at skabe en struktureret oversigt, organisere og præsentere en samling af billeder.</p>
+      <p>Denne hjemmeside er tiltænkt som en grafisk indgang i mit billedeprojekt hvor er at skabe en struktureret oversigt, organisere og præsentere billeder fra mit liv.</p>
   </div>
 </section>
 
@@ -72,7 +72,7 @@
         <i class="fa fa-question-circle"></i>
         <span>Hvordan virker det?</span>
     </button>
-    <button type="button" class="button">
+    <button type="button" class="button" onclick=showRandomPicture()>
         <i class="fa fa-random"></i>
         <span>Vis mig et tilfældigt billede</span>
     </button>
@@ -81,6 +81,11 @@
         <span>Vis billeder fra filtre</span>
     </button>
   </div>
+
+  <div id="random-picture">
+    <!-- The random picture will be displayed here -->
+  </div>
+
 </div>
 </form>
 </main>

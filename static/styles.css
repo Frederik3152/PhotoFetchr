@@ -101,13 +101,11 @@ font-size: 18px;
   padding: 20px;
   text-align: center;
 }
-
 .welcome-section h1 {
   color: #333;
   font-size: 2em;
   margin-bottom: 10px;
 }
-
 .welcome-section p {
   color: #666;
   font-size: 1.2em;
@@ -139,4 +137,25 @@ font-size: 18px;
   font-size: 40px;
   margin-bottom: 5px;
   color: #333;
+}
+.carousel-inner img {
+  transition: transform 0.5s ease;
+}
+.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.grid-view img {
+  width: 100%;
+  height: auto;
+  cursor: zoom-in;
+}
+#rotate-button {
+  background-color: #03A9F4;
+  border: 1px solid black;
+}
+#view-button {
+  background-color: #03A9F4;
+  border: 1px solid black;
 }

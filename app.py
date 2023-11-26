@@ -19,7 +19,7 @@ db_config = {
 def get_people():
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT name FROM pi_data.people")
+    cur.execute("SELECT DISTINCT name FROM pi_data.people ORDER BY name ASC")
     people_list = cur.fetchall()
     conn.close()
     return people_list
@@ -28,7 +28,7 @@ def get_people():
 def get_country():
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT country FROM pi_data.pictures")
+    cur.execute("SELECT DISTINCT country FROM pi_data.pictures ORDER BY country ASC")
     country_list = [country[0] for country in cur.fetchall()]
     conn.close()
     return country_list

@@ -4,16 +4,23 @@ import psycopg2
 from PIL import Image
 from io import BytesIO
 from datetime import date
+import configparser
 
 app = Flask(__name__, static_folder='static')
 
-# Database configuration
-db_config = {
-    'database': 'xxxxx',
-    'user': 'xxxxx',
-    'password': 'xxxxx',
-    'host': 'xxxxx',
-}
+# Function to parse the database configuration file
+def config(filename = 'config.ini', section = 'postgres-database'):
+    config = configparser.ConfigParser()
+    config.read(filename)
+    db = {}
+    if config.has_section(section):
+        params = config.items(section)
+        for param in params:
+            db[param[0]] = param[1]
+    return db
+
+# Set the global variable db_config as the database login credentials
+db_config = config()
 
 # Function to select unique names from database
 def get_people():

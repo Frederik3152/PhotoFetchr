@@ -11,8 +11,9 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <section class="welcome-section">
-                    <div class="container">
+                    <div id="result_header" class="container">
                         <h1>Antal billeder valgt ved filtrering:  {{ enumerated_images|length }}</h1>
+                        {% if enumerated_images|length == 100 %} <p>Du har valgt for mange billeder, så der vises kun de første 100</p> {% endif %}
                         <button class="btn btn-primary" id= "rotate-button" onclick="rotateImage()">Roter Billede</button>
                         <button class="btn btn-success" id= "view-button" onclick="toggleView()">Skift Visning</button>
 

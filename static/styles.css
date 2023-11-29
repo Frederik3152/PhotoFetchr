@@ -159,3 +159,6 @@ font-size: 18px;
   background-color: #03A9F4;
   border: 1px solid black;
 }
+#result_header p {
+  color: red;
+}

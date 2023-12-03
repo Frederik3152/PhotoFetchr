@@ -7,6 +7,15 @@
             });
         });
     });
+ 
+// Toggle the instructions on the "Hvordan virker det" button
+function showInstructions() {
+    var instructionsContainer = document.getElementById('instructions-container');
+    instructionsContainer.classList.toggle('hidden');
+
+    var instructionExplanations = document.getElementById('instruction-explanations');
+    instructionExplanations.style.display = instructionsContainer.classList.contains('hidden') ? 'none' : 'block';
+  }
 
 function showRandomPicture() {
     // Fetch a random picture URL from the Flask backend

@@ -135,8 +135,11 @@ font-size: 18px;
 }
 .button i {
   font-size: 40px;
-  margin-bottom: 5px;
+  margin-bottom: 5px; 
   color: #333;
+}
+.hidden {
+  display: none;
 }
 .carousel-inner img {
   transition: transform 0.5s ease;
@@ -161,4 +164,81 @@ font-size: 18px;
 }
 #result_header p {
   color: red;
+}
+.instruction {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.circle {
+  width: 40px;
+  height: 40px;
+  background-color: #ebebeb;
+  border: 1px solid #333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #03A9F4;
+  font-weight: bold;
+  margin-right: 10px;
+}
+#instructions-container .instruction:nth-child(1) {
+  top: 5%; left: 3%;
+}
+
+#instructions-container .instruction:nth-child(2) {
+  top: 19%; left: 29.25%;
+}
+
+#instructions-container .instruction:nth-child(3) {
+  top: 19%; left: 49%;
+}
+
+#instructions-container .instruction:nth-child(4) {
+  top: 19%; left: 68.75%;
+}
+/* Media query for smaller screens */
+@media (max-width: 800px) {
+  .circle {
+    width: 10vw; 
+    height: 10vw;
+    margin-right: 5vw;
+  }
+
+  #instructions-container .instruction:nth-child(1) {
+    top: 5%; 
+    left: 8%; 
+  }
+
+  #instructions-container .instruction:nth-child(2) {
+    top: 24.5%; 
+    left: 14.75%; 
+  }
+
+  #instructions-container .instruction:nth-child(3) {
+    top: 24.5%;
+    left: 46.5%; 
+  }
+
+  #instructions-container .instruction:nth-child(4) {
+    top: 24.5%; 
+    left: 76.5%; 
+  }
+}
+#instruction-explanations {
+  position: relative;
+  top: 200px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  padding: 20px;
+  display: none;
+  text-align: left;
+  border: 1px solid #03A9F4;
+  font-weight: bold;
+}
+.instruction-explanation {
+  margin-bottom: 10px;
 }

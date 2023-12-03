@@ -67,7 +67,7 @@
 
 <div class="container">
   <div class="button-container">
-    <button type="button" class="button">
+    <button type="button" class="button" onclick=showInstructions()>
         <i class="fa fa-question-circle"></i>
         <span>Hvordan virker det?</span>
     </button>
@@ -79,6 +79,36 @@
         <i class="fa fa-filter"></i>
         <span>Vis billeder fra filtre</span>
     </button>
+  </div>
+
+  <div id="instructions-container" class="hidden">
+    <div class="instruction">
+        <div class="circle">1</div>
+    </div>
+    <div class="instruction">
+        <div class="circle">2</div>
+    </div>
+    <div class="instruction">
+      <div class="circle">3</div>
+  </div>
+   <div class="instruction">
+    <div class="circle">4</div>
+   </div>
+  </div>
+
+  <div id="instruction-explanations">
+    <div class="instruction-explanation">
+      (1) "Vælg Filtre"-knappen bruges til at udvælge de billeder som man vil se. Her kan filtreres på hvor og hvornår billederne er taget, hvem som optræder på de viste billeder, eller et specifikt søgeord.
+    </div>
+    <div class="instruction-explanation">
+      (2) Denne knap åbner og lukker denne hjælpeforklaring, og bør trykkes på igen inden nogle af de andre knapper benyttes. 
+    </div>
+    <div class="instruction-explanation">
+      (3) Denne knap viser et tilfældigt billede i bunden af siden, billedet er fuldstændig tilfældigt og kan være taget når som helst. 
+    </div>
+    <div class="instruction-explanation">
+      (4) Denne knap benyttes efter "Vælg Filtre"-knappen ved nummer (1) for at få vist de valgte billeder fra filtrene. 
+    </div>
   </div>
 
   <div id="random-picture">

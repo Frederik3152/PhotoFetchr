@@ -1,3 +1,10 @@
+# This function use a file called 'config.ini' with the following format
+# [postgres-database]
+#    database = 
+#    user = 
+#    password =  
+#    host = 
+
 import configparser
 
 # Function to parse the database configuration file

@@ -12,8 +12,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update and rebuild
+      - name: Sync to deployment directory
         run: |
-          cd /opt/stacks/hass
-          git pull
+          rsync -a --delete ./ /opt/stacks/hass/photofetchr
+          cd /opt/stacks/hass/photofetchr
           docker compose up -d --build photofetchr

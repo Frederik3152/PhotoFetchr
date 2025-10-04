@@ -31,13 +31,26 @@ let rotation = 0;
 // How much to rotate the image at a time
 const angle = 90;
 function rotateImage() {
-    // Ensure angle range of 0 to 359 with "%" operator,
+    // Ensure angle range of 0 to 359 with "%" operator
     rotation = (rotation + angle) % 360;
-    var images = document.querySelectorAll('.carousel-inner img');
-    images.forEach(function (image) {
+    var carouselImages = document.querySelectorAll('.carousel-inner img');
+    var gridImages = document.querySelectorAll('.grid-view img');
+    var enlargedImage = document.getElementById('enlargedImg');
+    
+    carouselImages.forEach(function (image) {
         // Apply the rotation transformation
         image.style.transform = `rotate(${rotation}deg)`;
     });
+
+    gridImages.forEach(function (image) {
+        // Apply the rotation transformation
+        image.style.transform = `rotate(${rotation}deg)`;
+    });
+
+    if (enlargedImage) {
+        // Apply the rotation transformation
+        enlargedImage.style.transform = `rotate(${rotation}deg)`;
+    }
 }
 // Toggle the view between the grid and carousel views in the result page
 function toggleView() {

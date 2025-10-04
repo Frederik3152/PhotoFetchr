@@ -5,6 +5,7 @@ from PIL import Image
 from io import BytesIO
 from datetime import date
 from config import config
+import os
 
 app = Flask(__name__, static_folder='static')
 
@@ -118,19 +119,50 @@ def filter_images():
 def random_picture():
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT id FROM pi_data.pictures ORDER BY RANDOM() LIMIT 1")
-    random_image = cur.fetchone()[0]
-    random_image_url = (f"/image/{random_image}")
-    return jsonify({"imageUrl": random_image_url})
+    cur.execute("SELECT id FROM pi_data.pictures WHERE file_path IS NOT NULL ORDER BY RANDOM() LIMIT 1")
+    result = cur.fetchone()
+    conn.close()
+    
+    if result:
+        random_image = result[0]
+        random_image_url = f"/image/{random_image}"
+        return jsonify({"imageUrl": random_image_url})
+    else:
+        return jsonify({"error": "No images found"}), 404
 
-# Function to query the image binary content and retrieve it
-def get_image_from_database(image_id):
+def get_image_from_filesystem(image_id):
+    """
+    Get image from filesystem instead of database
+    """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT content FROM pi_data.pictures WHERE id = %s", (image_id,))
-    image_data = cur.fetchone()[0]
+    cur.execute("SELECT file_path FROM pi_data.pictures WHERE id = %s", (image_id,))
+    result = cur.fetchone()
+    cur.close()
     conn.close()
-    return image_data
+    
+    if result and result[0] and os.path.exists(result[0]):
+        with open(result[0], 'rb') as f:
+            return f.read()
+    return None
+
+def get_thumbnail(image_id):
+    """
+    Get thumbnail from filesystem
+    """
+    conn = psycopg2.connect(**db_config)
+    cur = conn.cursor()
+    cur.execute("SELECT thumbnail_path FROM pi_data.pictures WHERE id = %s", (image_id,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if result and result[0] and os.path.exists(result[0]):
+        with open(result[0], 'rb') as f:
+            return f.read()
+    # Fallback to original if no thumbnail
+    return get_image_from_filesystem(image_id)
+
 
 # Function to render the image
 def render_image(image_data):
@@ -143,8 +175,20 @@ def render_image(image_data):
 # Create a route for each individual picture
 @app.route('/image/<int:image_id>')
 def show_image(image_id):
-    image_data = get_image_from_database(image_id)
-    return render_image(image_data)
+    image_data = get_image_from_filesystem(image_id)
+    if image_data:
+        return render_image(image_data)
+    else:
+        return "Image not found", 404
+    
+@app.route('/thumbnail/<int:image_id>')
+def show_thumbnail(image_id):
+    image_data = get_thumbnail(image_id)
+    if image_data:
+        return render_image(image_data)  
+    else:
+        return "Thumbnail not found", 404
+
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,53 +1,28 @@
-name: Deploy photofetchr to Raspberry Pi
+name: Deploy PhotoFetchr
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - "photofetchr/**"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install rsync & ssh client
-        run: sudo apt-get update && sudo apt-get install -y rsync openssh-client
-
-      - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PI_SSH_KEY }}
-
-      - name: Add Pi to known_hosts
-        run: ssh-keyscan -H 192.168.8.8 >> ~/.ssh/known_hosts
-
-      - name: Sync photofetchr repo -> Pi
-        env:
-          PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
+      - name: Configure SSH
         run: |
-          RSYNC_RSH="ssh -p ${PI_SSH_PORT:-22}" \
-          rsync -av --delete --omit-dir-times --no-perms \
-            --exclude '.git' --exclude '.github' --exclude 'node_modules' --exclude '.env' --exclude '.secrets' --exclude 'ssl' \
-            ./ ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:/opt/stacks/hass/photofetchr/
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_KEY }}" | tr -d '\r' > ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+          # Disable strict host key checking (no need for ssh-keyscan)
+          printf "Host *\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" > ~/.ssh/config
 
-      - name: Remote chown and restart photofetchr service from top-level compose
-        env:
-          PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
+      - name: Deploy to Raspberry Pi
         run: |
-          ssh -p ${PI_SSH_PORT:-22} ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }} bash -s <<'EOF'
-            set -e
-            sudo chown -R deploy:deploy /opt/stacks/hass/photofetchr
-
-            # REPLACE config_app with the exact service name from your compose if different
-            SERVICE_NAME=config_app
-            COMPOSE_FILE=/opt/stacks/hass/compose.yaml
-
-            if [ -f "$COMPOSE_FILE" ]; then
-              echo "Building and restarting service: $SERVICE_NAME"
-              docker compose -f "$COMPOSE_FILE" up -d --no-deps --build "$SERVICE_NAME"
-            else
-              echo "ERROR: compose file not found at $COMPOSE_FILE"
-              exit 1
-            fi
-          EOF
+          ssh -i ~/.ssh/authorized_keys pi@${{ secrets.PI_HOST }} \
+            "cd /opt/stacks/hass/photofetchr && git pull && docker compose up -d --build photofetchr"

@@ -17,12 +17,11 @@ jobs:
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.PI_SSH_KEY }}" | tr -d '\r' > ~/.ssh/authorized_keys
-          chmod 600 ~/.ssh/authorized_keys
-          # Disable strict host key checking (no need for ssh-keyscan)
+          echo "${{ secrets.PI_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           printf "Host *\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" > ~/.ssh/config
 
       - name: Deploy to Raspberry Pi
         run: |
-          ssh -i ~/.ssh/authorized_keys pi@${{ secrets.PI_HOST }} \
-            "cd /opt/stacks/hass/photofetchr && git pull && docker compose up -d --build photofetchr"
+          ssh -i ~/.ssh/id_rsa pi@${{ secrets.PI_HOST }} \
+            "cd /opt/stacks/hass && git pull && docker compose up -d --build photofetchr"

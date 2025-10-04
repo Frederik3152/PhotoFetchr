@@ -14,6 +14,6 @@ jobs:
 
       - name: Sync to deployment directory
         run: |
-          sudo rsync -a --delete --exclude='.venv' --exclude='config.ini' ./ /opt/stacks/hass/photofetchr
+          sudo rsync -a --delete --exclude='/venv/' --exclude='config.ini' ./ /opt/stacks/hass/photofetchr
           cd /opt/stacks/hass/photofetchr
-          docker compose up -d --build photofetchr
+          docker compose up -d --build config_app

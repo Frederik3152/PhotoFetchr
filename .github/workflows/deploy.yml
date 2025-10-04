@@ -36,7 +36,7 @@ jobs:
             --exclude '.git' --exclude '.github' --exclude 'node_modules' --exclude '.env' --exclude '.secrets' --exclude 'ssl' \
             ./ ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:/opt/stacks/hass/photofetchr/
 
-      - name: Remote: chown and restart photofetchr service from top-level compose
+      - name: Remote chown and restart photofetchr service from top-level compose
         env:
           PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
         run: |

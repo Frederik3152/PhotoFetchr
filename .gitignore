@@ -96,3 +96,5 @@ config.ini
 
 # Ignore secrets
 secrets.*
+github_actions_pi_deploy_key
+github_actions_pi_deploy_key.pub

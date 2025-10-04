@@ -1,0 +1,58 @@
+name: Deploy photofetchr to Raspberry Pi
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install rsync & ssh client
+        run: sudo apt-get update && sudo apt-get install -y rsync openssh-client
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PI_SSH_KEY }}
+
+      - name: Add Pi to known_hosts
+        run: |
+          if [ -n "${{ secrets.PI_SSH_PORT }}" ] && [ "${{ secrets.PI_SSH_PORT }}" != "22" ]; then
+            ssh-keyscan -p ${{ secrets.PI_SSH_PORT }} -H ${{ secrets.PI_HOST }} >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H ${{ secrets.PI_HOST }} >> ~/.ssh/known_hosts
+          fi
+
+      - name: Sync photofetchr repo -> Pi
+        env:
+          PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
+        run: |
+          RSYNC_RSH="ssh -p ${PI_SSH_PORT:-22}" \
+          rsync -av --delete --omit-dir-times --no-perms \
+            --exclude '.git' --exclude '.github' --exclude 'node_modules' --exclude '.env' --exclude '.secrets' --exclude 'ssl' \
+            ./ ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:/opt/stacks/hass/photofetchr/
+
+      - name: Remote: chown and restart photofetchr service from top-level compose
+        env:
+          PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
+        run: |
+          ssh -p ${PI_SSH_PORT:-22} ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }} bash -s <<'EOF'
+            set -e
+            sudo chown -R deploy:deploy /opt/stacks/hass/photofetchr
+
+            # REPLACE config_app with the exact service name from your compose if different
+            SERVICE_NAME=config_app
+            COMPOSE_FILE=/opt/stacks/hass/compose.yaml
+
+            if [ -f "$COMPOSE_FILE" ]; then
+              echo "Building and restarting service: $SERVICE_NAME"
+              docker compose -f "$COMPOSE_FILE" up -d --no-deps --build "$SERVICE_NAME"
+            else
+              echo "ERROR: compose file not found at $COMPOSE_FILE"
+              exit 1
+            fi
+          EOF

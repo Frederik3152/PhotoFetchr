@@ -14,6 +14,9 @@ db_config = config()
 
 # Function to select unique names from database
 def get_people():
+    """
+    Get unique names from the database
+    """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
     cur.execute("SELECT DISTINCT name FROM pi_data.people ORDER BY name ASC")
@@ -23,6 +26,9 @@ def get_people():
 
 # Function to select unique countries from database
 def get_country():
+    """
+    Get unique countries from the database
+    """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
     cur.execute("SELECT DISTINCT country FROM pi_data.pictures ORDER BY country ASC")
@@ -33,6 +39,9 @@ def get_country():
 # Main screen for querying the database
 @app.route('/', methods=['GET'])
 def dropdown():
+    """
+    Render the main layout with dropdowns for people and countries
+    """
     people_list = get_people()
     country_list = get_country()
     return render_template('layout.html', people=people_list, countries=country_list)
@@ -40,6 +49,9 @@ def dropdown():
 # Route for images display
 @app.route('/filter_images', methods=['POST'])
 def filter_images():
+    """
+    Filter images based on user input and display results
+    """
     ################### Date filters ##########################
     # Extract the start and end date variables from the form
     start_date = request.form['start_date']
@@ -117,6 +129,9 @@ def filter_images():
 # loading image from render_image function through a new route
 @app.route('/random-pic')
 def random_picture():
+    """
+    Fetch a random picture ID from the database and return its URL
+    """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
     cur.execute("SELECT id FROM pi_data.pictures WHERE file_path IS NOT NULL ORDER BY RANDOM() LIMIT 1")
@@ -166,6 +181,9 @@ def get_thumbnail(image_id):
 
 # Function to render the image
 def render_image(image_data):
+    """
+    Render image from binary data
+    """
     image = Image.open(BytesIO(image_data))
     output_buffer = BytesIO()
     image.save(output_buffer, format="JPEG")
@@ -175,6 +193,9 @@ def render_image(image_data):
 # Create a route for each individual picture
 @app.route('/image/<int:image_id>')
 def show_image(image_id):
+    """
+    Show image by ID
+    """
     image_data = get_image_from_filesystem(image_id)
     if image_data:
         return render_image(image_data)
@@ -183,6 +204,9 @@ def show_image(image_id):
     
 @app.route('/thumbnail/<int:image_id>')
 def show_thumbnail(image_id):
+    """
+    Show thumbnail by ID
+    """
     image_data = get_thumbnail(image_id)
     if image_data:
         return render_image(image_data)  

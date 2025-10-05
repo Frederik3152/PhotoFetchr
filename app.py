@@ -226,13 +226,26 @@ def allowed_file(filename):
 def upload():
     if request.method == 'POST':
         files = request.files.getlist('photos')
-        country = request.form.get('country', '')
+        country = request.form.get('country', '').strip()
         people = request.form.getlist('people')
+        custom_date = request.form.get('date', '').strip()
+        
+        # Validate mandatory country
+        if not country:
+            return jsonify([{'success': False, 'error': 'Country is required'}])
+        
+        # Parse custom date if provided
+        photo_date = None
+        if custom_date:
+            try:
+                photo_date = datetime.strptime(custom_date, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify([{'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD'}])
         
         results = []
         for file in files:
             if file and allowed_file(file.filename):
-                result = add_photo_to_db(file, country, people)
+                result = add_photo_to_db(file, country, people, photo_date)
                 results.append(result)
         
         return jsonify(results)
@@ -241,10 +254,8 @@ def upload():
     people_list = get_people()
     return render_template('upload.html', people=people_list)
 
-def add_photo_to_db(file, country, people):
-    """
-    Add single photo to database and filesystem
-    """
+def add_photo_to_db(file, country, people, custom_date=None):
+    """Add single photo to database and filesystem"""
     try:
         # Get next ID
         conn = psycopg2.connect(**db_config)
@@ -252,12 +263,14 @@ def add_photo_to_db(file, country, people):
         cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM pi_data.pictures")
         photo_id = cur.fetchone()[0]
         
-        # Generate paths
-        now = datetime.now()
-        filename = f"{now.strftime('%Y%m%d')}_{photo_id:06d}_{secure_filename(file.filename)}"
+        # Use custom date or current date
+        photo_date = custom_date if custom_date else datetime.now().date()
         
-        original_path = f"/photos/originals/{now.year}/{now.month:02d}/{filename}"
-        thumb_path = f"/photos/thumbnails/{now.year}/{now.month:02d}/thumb_{filename}"
+        # Generate paths using the photo date
+        filename = f"{photo_date.strftime('%Y%m%d')}_{photo_id:06d}_{secure_filename(file.filename)}"
+        
+        original_path = f"/photos/originals/{photo_date.year}/{photo_date.month:02d}/{filename}"
+        thumb_path = f"/photos/thumbnails/{photo_date.year}/{photo_date.month:02d}/thumb_{filename}"
         
         # Create directories and save files
         Path(original_path).parent.mkdir(parents=True, exist_ok=True)
@@ -274,7 +287,7 @@ def add_photo_to_db(file, country, people):
         cur.execute("""
             INSERT INTO pi_data.pictures (id, file_name, country, photo_taken, file_path, thumbnail_path, file_size)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (photo_id, file.filename, country, now.date(), original_path, thumb_path, os.path.getsize(original_path)))
+        """, (photo_id, file.filename, country, photo_date, original_path, thumb_path, os.path.getsize(original_path)))
         
         # Add people
         for person_name in people:
@@ -288,7 +301,7 @@ def add_photo_to_db(file, country, people):
         cur.close()
         conn.close()
         
-        return {'success': True, 'filename': file.filename, 'id': photo_id}
+        return {'success': True, 'filename': file.filename, 'id': photo_id, 'date': photo_date.isoformat()}
         
     except Exception as e:
         return {'success': False, 'filename': file.filename, 'error': str(e)}

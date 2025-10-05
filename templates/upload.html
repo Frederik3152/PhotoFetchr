@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Photos</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        .results { margin-top: 20px; padding: 10px; background: #f0f0f0; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h2>Upload Photos</h2>
+    
+    <form id="uploadForm" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Select Photos:</label>
+            <input type="file" name="photos" multiple accept="image/*" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Country:</label>
+            <input type="text" name="country" placeholder="Denmark">
+        </div>
+        
+        <div class="form-group">
+            <label>People:</label>
+            <select name="people" multiple size="5">
+                {% for person in people %}
+                <option value="{{ person[0] }}">{{ person[0] }}</option>
+                {% endfor %}
+            </select>
+            <small>Hold Ctrl/Cmd to select multiple</small>
+        </div>
+        
+        <button type="submit">Upload</button>
+    </form>
+    
+    <div id="results" class="results" style="display:none;"></div>
+    
+    <a href="/">← Back</a>
+
+    <script>
+        document.getElementById('uploadForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            document.getElementById('results').innerHTML = 'Uploading...';
+            document.getElementById('results').style.display = 'block';
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                let html = '<h3>Results:</h3>';
+                data.forEach(result => {
+                    if (result.success) {
+                        html += `<p class="success">✓ ${result.filename} (ID: ${result.id})</p>`;
+                    } else {
+                        html += `<p class="error">✗ ${result.filename}: ${result.error}</p>`;
+                    }
+                });
+                document.getElementById('results').innerHTML = html;
+            });
+        };
+    </script>
+</body>
+</html>

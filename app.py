@@ -3,9 +3,12 @@ from flask import Flask, render_template, request, Response, jsonify
 import psycopg2
 from PIL import Image
 from io import BytesIO
-from datetime import date
+from datetime import date, datetime
 from config import config
 import os
+from werkzeug.utils import secure_filename
+from pathlib import Path
+import shutil
 
 app = Flask(__name__, static_folder='static')
 
@@ -212,6 +215,83 @@ def show_thumbnail(image_id):
         return render_image(image_data)  
     else:
         return "Thumbnail not found", 404
+    
+# Simple upload configuration
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'POST':
+        files = request.files.getlist('photos')
+        country = request.form.get('country', '')
+        people = request.form.getlist('people')
+        
+        results = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                result = add_photo_to_db(file, country, people)
+                results.append(result)
+        
+        return jsonify(results)
+    
+    # GET - show form
+    people_list = get_people()
+    return render_template('upload.html', people=people_list)
+
+def add_photo_to_db(file, country, people):
+    """
+    Add single photo to database and filesystem
+    """
+    try:
+        # Get next ID
+        conn = psycopg2.connect(**db_config)
+        cur = conn.cursor()
+        cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM pi_data.pictures")
+        photo_id = cur.fetchone()[0]
+        
+        # Generate paths
+        now = datetime.now()
+        filename = f"{now.strftime('%Y%m%d')}_{photo_id:06d}_{secure_filename(file.filename)}"
+        
+        original_path = f"/photos/originals/{now.year}/{now.month:02d}/{filename}"
+        thumb_path = f"/photos/thumbnails/{now.year}/{now.month:02d}/thumb_{filename}"
+        
+        # Create directories and save files
+        Path(original_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(thumb_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        file.save(original_path)
+        
+        # Create thumbnail
+        with Image.open(original_path) as img:
+            img.thumbnail((300, 300))
+            img.save(thumb_path, "JPEG", quality=85)
+        
+        # Save to database
+        cur.execute("""
+            INSERT INTO pi_data.pictures (id, file_name, country, photo_taken, file_path, thumbnail_path, file_size)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (photo_id, file.filename, country, now.date(), original_path, thumb_path, os.path.getsize(original_path)))
+        
+        # Add people
+        for person_name in people:
+            cur.execute("SELECT id FROM pi_data.people WHERE name = %s", (person_name,))
+            person_result = cur.fetchone()
+            if person_result:
+                cur.execute("INSERT INTO pi_data.person_picture (peopleid, pictureid) VALUES (%s, %s)", 
+                          (person_result[0], photo_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return {'success': True, 'filename': file.filename, 'id': photo_id}
+        
+    except Exception as e:
+        return {'success': False, 'filename': file.filename, 'error': str(e)}
 
 
 if __name__ == '__main__':

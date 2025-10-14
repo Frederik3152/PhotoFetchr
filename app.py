@@ -22,7 +22,7 @@ def get_people():
     """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT name FROM pi_data.people ORDER BY name ASC")
+    cur.execute("SELECT DISTINCT name FROM photofetchr.people ORDER BY name ASC")
     people_list = cur.fetchall()
     conn.close()
     return people_list
@@ -34,7 +34,7 @@ def get_country():
     """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT country FROM pi_data.pictures ORDER BY country ASC")
+    cur.execute("SELECT DISTINCT country FROM photofetchr.pictures ORDER BY country ASC")
     country_list = [country[0] for country in cur.fetchall()]
     conn.close()
     return country_list
@@ -95,8 +95,8 @@ def filter_images():
     for i in range(len(selected_people)):
         alias = f"PE{i+1}"
         filter_values.append(f"{alias}.name = '{selected_people[i-1]}' AND")
-        query_parts.append(f"INNER JOIN pi_data.person_picture AS PP{i+1} ON PP{i+1}.pictureid = PIC.id")
-        query_parts.append(f"INNER JOIN pi_data.people AS {alias} ON {alias}.id = PP{i+1}.peopleid")
+        query_parts.append(f"INNER JOIN photofetchr.person_picture AS PP{i+1} ON PP{i+1}.pictureid = PIC.id")
+        query_parts.append(f"INNER JOIN photofetchr.people AS {alias} ON {alias}.id = PP{i+1}.peopleid")
     
     ################### Text box filter ##########################
     user_string = request.form['tekst-box']
@@ -114,7 +114,7 @@ def filter_images():
     # Build the SQL query from dynamic query parts
     sql_query = f"""
         SELECT PIC.id
-        FROM pi_data.pictures AS PIC
+        FROM photofetchr.pictures AS PIC
         {' '.join(query_parts)}
     """
     print("SQL Query:", sql_query) # FOR DEBUGGING
@@ -137,7 +137,7 @@ def random_picture():
     """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT id FROM pi_data.pictures WHERE file_path IS NOT NULL ORDER BY RANDOM() LIMIT 1")
+    cur.execute("SELECT id FROM photofetchr.pictures WHERE file_path IS NOT NULL ORDER BY RANDOM() LIMIT 1")
     result = cur.fetchone()
     conn.close()
     
@@ -154,7 +154,7 @@ def get_image_from_filesystem(image_id):
     """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT file_path FROM pi_data.pictures WHERE id = %s", (image_id,))
+    cur.execute("SELECT file_path FROM photofetchr.pictures WHERE id = %s", (image_id,))
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -170,7 +170,7 @@ def get_thumbnail(image_id):
     """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
-    cur.execute("SELECT thumbnail_path FROM pi_data.pictures WHERE id = %s", (image_id,))
+    cur.execute("SELECT thumbnail_path FROM photofetchr.pictures WHERE id = %s", (image_id,))
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -260,7 +260,7 @@ def add_photo_to_db(file, country, people, custom_date=None):
         # Get next ID
         conn = psycopg2.connect(**db_config)
         cur = conn.cursor()
-        cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM pi_data.pictures")
+        cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM photofetchr.pictures")
         photo_id = cur.fetchone()[0]
         
         # Use custom date or current date
@@ -285,16 +285,16 @@ def add_photo_to_db(file, country, people, custom_date=None):
         
         # Save to database
         cur.execute("""
-            INSERT INTO pi_data.pictures (id, file_name, country, photo_taken, file_path, thumbnail_path, file_size)
+            INSERT INTO photofetchr.pictures (id, file_name, country, photo_taken, file_path, thumbnail_path, file_size)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (photo_id, file.filename, country, photo_date, original_path, thumb_path, os.path.getsize(original_path)))
         
         # Add people
         for person_name in people:
-            cur.execute("SELECT id FROM pi_data.people WHERE name = %s", (person_name,))
+            cur.execute("SELECT id FROM photofetchr.people WHERE name = %s", (person_name,))
             person_result = cur.fetchone()
             if person_result:
-                cur.execute("INSERT INTO pi_data.person_picture (peopleid, pictureid) VALUES (%s, %s)", 
+                cur.execute("INSERT INTO photofetchr.person_picture (peopleid, pictureid) VALUES (%s, %s)", 
                           (person_result[0], photo_id))
         
         conn.commit()

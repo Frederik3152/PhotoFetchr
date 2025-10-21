@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PhotoFetchr{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body data-color-scheme="light">
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-content">
+                <a href="{{ url_for('homepage') }}" class="logo">PhotoFetchr</a>
+                
+                <nav class="main-nav">
+                    <a href="{{ url_for('homepage') }}" 
+                       class="nav-btn {{ 'active' if request.endpoint == 'homepage' }}">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-text">Home</span>
+                    </a>
+                    <a href="{{ url_for('search') }}" 
+                       class="nav-btn {{ 'active' if request.endpoint == 'search' }}">
+                        <span class="nav-icon">🔍</span>
+                        <span class="nav-text">Search</span>
+                    </a>
+                    <a href="{{ url_for('upload') }}" 
+                       class="nav-btn {{ 'active' if request.endpoint == 'upload' }}">
+                        <span class="nav-icon">📤</span>
+                        <span class="nav-text">Upload</span>
+                    </a>
+                </nav>
+                
+                <div class="header-actions">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

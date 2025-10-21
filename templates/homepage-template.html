@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}PhotoFetchr{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <h2 class="hero-title">Your Photo Collection</h2>
+        <p class="hero-subtitle">Organize, search, and discover your memories</p>
+        
+        <!-- Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-item">
+                <span class="stat-number">{{ stats.total_photos|format_number }}</span>
+                <span class="stat-label">Photos</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ stats.total_countries }}</span>
+                <span class="stat-label">Countries</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ stats.total_people }}</span>
+                <span class="stat-label">People</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ stats.storage_used }}</span>
+                <span class="stat-label">Storage</span>
+            </div>
+        </div>
+        
+        <!-- Hero Search -->
+        <div class="hero-search">
+            <form class="search-container large" action="{{ url_for('search') }}" method="GET">
+                <input type="text" class="search-input" name="q" placeholder="Search your photos..." />
+                <button type="submit" class="search-btn">🔍 Search</button>
+            </form>
+        </div>
+        
+        <div class="upload-cta">
+            <a href="{{ url_for('upload') }}" class="btn btn--primary btn--lg">📤 Upload Photos</a>
+        </div>
+    </section>
+
+    <!-- Recent Photos Section -->
+    <section class="recent-section">
+        <div class="section-header">
+            <h3>Recent Photos</h3>
+            <a href="{{ url_for('search') }}" class="btn btn--outline">View All</a>
+        </div>
+        
+        <div class="photos-grid">
+            {% if recent_photos %}
+                {% for photo in recent_photos %}
+                <div class="photo-card" data-href="{{ photo.thumbnail_url }}">
+                    <div class="photo-thumbnail">
+                        <img src="{{ photo.thumbnail_url }}" 
+                             alt="{{ photo.file_name }}" loading="lazy">
+                        <div class="photo-overlay">
+                        </div>
+                    </div>
+                    <div class="photo-info">
+                        <h4 class="photo.file_name">{{ photo.file_name }}</h4>
+                        <div class="photo-meta">
+                            <span>📍 {{ photo.location }}</span>
+                            {% if photo.date_taken %}
+                            <span>📅 {{ photo.date_taken|format_date }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-content">
+                    <div class="empty-icon">📷</div>
+                    <h3>No Photos Yet</h3>
+                    <p>Start building your collection by uploading your first photos!</p>
+                    <a href="{{ url_for('upload') }}" class="btn btn--primary">Upload Photos</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Homepage specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize photo grid interactions
+    const photoCards = document.querySelectorAll('.photo-card');
+    
+    photoCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -15,6 +15,103 @@ app = Flask(__name__, static_folder='static')
 # Set the global variable db_config as the database login credentials
 db_config = config()
 
+def get_photo_stats():
+    """
+    Get photo statistics from the database
+    1. Total number of photos
+    2. Total number of countries
+    3. Total number of people
+    4. Total storage used
+    """
+    conn = psycopg2.connect(**db_config)
+    cursor = conn.cursor()
+    
+    # Count total photos
+    cursor.execute("SELECT COUNT(*) FROM photofetchr.pictures")
+    total_photos = cursor.fetchone()[0]
+    
+    # Count countries
+    cursor.execute("SELECT COUNT(DISTINCT country) FROM photofetchr.pictures WHERE country IS NOT NULL")
+    total_countries = cursor.fetchone()[0]
+    
+    # Count people (adjust table name as needed)
+    cursor.execute("SELECT COUNT(DISTINCT peopleid) FROM photofetchr.person_picture")
+    total_people = cursor.fetchone()[0]
+    
+    # Calculate storage (adjust column names)
+    cursor.execute("SELECT SUM(file_size) FROM photofetchr.pictures")
+    storage_bytes = cursor.fetchone()[0] or 0
+    storage_used = f"{round(storage_bytes / (1024 **3), 2)}GB"
+    
+    return {
+        'total_photos': total_photos,
+        'total_countries': total_countries, 
+        'total_people': total_people,
+        'storage_used': storage_used
+    }
+
+def get_recent_photos():
+    """
+    Show most recent photos from the database
+    """
+    conn = psycopg2.connect(**db_config)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, file_name, country, photo_taken, thumbnail_path
+        FROM photofetchr.pictures 
+        WHERE thumbnail_path IS NOT NULL
+        ORDER BY photo_taken DESC 
+        LIMIT 6
+        """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    photos = []
+    for row in rows:
+        photo_id = row[0]
+        file_name = row[1]
+        country = row[2]
+        photo_taken = row[3]
+        thumb_path = row[4]
+
+        photos.append({
+            'id': photo_id,
+            'title': file_name,
+            'thumbnail_url': f"/thumbnail/{photo_id}",
+            'location': country,
+            'date_taken': photo_taken,
+            })
+     
+    return photos
+
+@app.route('/')
+def homepage():
+    stats = get_photo_stats()
+    recent_photos = get_recent_photos()
+    return render_template('homepage-template.html', stats=stats, recent_photos=recent_photos)
+
+@app.route('/search')
+def search():
+    return render_template('search.html')
+
+@app.template_filter('format_number')
+def format_number(value):
+    """
+    Format numbers with commas
+    """
+    if isinstance(value, (int, float)):
+        return f"{value:,}"
+    return value
+
+@app.template_filter('format_date')
+def format_date(value):
+    """
+    Format datetime objects
+    """
+    if isinstance(value, datetime):
+        return value.strftime('%Y-%m-%d')
+    return value
+
 # Function to select unique names from database
 def get_people():
     """
@@ -40,14 +137,14 @@ def get_country():
     return country_list
 
 # Main screen for querying the database
-@app.route('/', methods=['GET'])
-def dropdown():
-    """
-    Render the main layout with dropdowns for people and countries
-    """
-    people_list = get_people()
-    country_list = get_country()
-    return render_template('layout.html', people=people_list, countries=country_list)
+# @app.route('/', methods=['GET'])
+# def dropdown():
+#     """
+#     Render the main layout with dropdowns for people and countries
+#     """
+#     people_list = get_people()
+#     country_list = get_country()
+#     return render_template('layout.html', people=people_list, countries=country_list)
 
 # Route for images display
 @app.route('/filter_images', methods=['POST'])
@@ -175,9 +272,17 @@ def get_thumbnail(image_id):
     cur.close()
     conn.close()
     
-    if result and result[0] and os.path.exists(result[0]):
-        with open(result[0], 'rb') as f:
-            return f.read()
+    # if result and result[0] and os.path.exists(result[0]):
+    #     with open(result[0], 'rb') as f:
+    #         return f.read()
+        
+    if result and result[0]:
+        # Replace /photos/ with your local Windows path
+        thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
+        
+        if os.path.exists(thumbnail_path):
+            with open(thumbnail_path, 'rb') as f:
+                return f.read()
     # Fallback to original if no thumbnail
     return get_image_from_filesystem(image_id)
 

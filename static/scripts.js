@@ -70,3 +70,9 @@ function openModal(imageUrl) {
     $('#enlargedImg').attr('src', imageUrl);
     $('#imageModal').modal('show');
 }
+
+document.querySelectorAll('.photo-card').forEach(card => {
+  card.addEventListener('click', () => {
+    window.location.href = card.dataset.href;
+  });
+});

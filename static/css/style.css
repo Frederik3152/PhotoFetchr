@@ -1227,7 +1227,6 @@ select.form-control {
   display: flex;
   background: var(--color-secondary);
   border-radius: var(--radius-base);
-  overflow: hidden;
 }
 
 .view-btn {

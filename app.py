@@ -88,11 +88,196 @@ def get_recent_photos():
 def homepage():
     stats = get_photo_stats()
     recent_photos = get_recent_photos()
-    return render_template('homepage-template.html', stats=stats, recent_photos=recent_photos)
+    return render_template('homepage.html', stats=stats, recent_photos=recent_photos)
 
 @app.route('/search')
 def search():
-    return render_template('search.html')
+    # Get data needed for the search page
+    people_list = get_people()
+    country_list = get_country()
+    search_query = request.args.get('q', '')
+    return render_template('search.html', people=people_list, countries=country_list, search_query=search_query)
+
+@app.route('/api/search', methods=['POST'])
+def api_search():
+    """
+    Handle search requests from the search interface
+    Returns JSON with search results
+    """
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+
+        # Extract search parameters
+        search_text = data.get('search_text', '')
+        countries = data.get('countries', [])
+        people = data.get('people', [])
+        date_from = data.get('date_from', '')
+        date_to = data.get('date_to', '')
+        sort_by = data.get('sort_by', 'date')
+
+        # Build the search query
+        results = search_photos(search_text, countries, people, date_from, date_to, sort_by)
+
+        return jsonify({
+            'success': True,
+            'results': results,
+            'count': len(results)
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+    
+@app.route('/api/photo/<int:photo_id>')
+def api_photo_details(photo_id):
+    """Get detailed information for a specific photo"""
+    try:
+        photo_details = get_photo_details(photo_id)
+        if photo_details:
+            return jsonify({
+                'success': True,
+                'photo': photo_details
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Photo not found'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def search_photos(search_text='', countries=[], people=[], date_from='', date_to='', sort_by='date'):
+    """
+    Enhanced search function that returns photo data for API
+    """
+    conn = psycopg2.connect(**db_config)
+    cursor = conn.cursor()
+
+    # Base query
+    query = """
+        SELECT DISTINCT p.id, p.file_name, p.country, p.photo_taken, p.thumbnail_path, p.file_size
+        FROM photofetchr.pictures p
+    """
+
+    # Add joins for people filter if needed
+    joins = []
+    conditions = ["1=1"]  # Always true base condition
+    params = []
+
+    # People filter
+    if people:
+        for i, person in enumerate(people):
+            alias = f"pp{i}"
+            joins.append(f"INNER JOIN photofetchr.person_picture {alias} ON {alias}.pictureid = p.id")
+            joins.append(f"INNER JOIN photofetchr.people pe{i} ON pe{i}.id = {alias}.peopleid")
+            conditions.append(f"pe{i}.name = %s")
+            params.append(person)
+
+    # Text search filter
+    if search_text:
+        conditions.append("LOWER(p.file_name) LIKE LOWER(%s)")
+        params.append(f'%{search_text}%')
+
+    # Country filter
+    if countries:
+        placeholders = ','.join(['%s'] * len(countries))
+        conditions.append(f"p.country IN ({placeholders})")
+        params.extend(countries)
+
+    # Date filters
+    if date_from:
+        conditions.append("p.photo_taken >= %s")
+        params.append(date_from)
+
+    if date_to:
+        conditions.append("p.photo_taken <= %s")
+        params.append(date_to)
+
+    # Construct final query
+    if joins:
+        query += " " + " ".join(joins)
+
+    query += " WHERE " + " AND ".join(conditions)
+
+    # Add sorting
+    if sort_by == 'title':
+        query += " ORDER BY p.file_name ASC"
+    else:  # Default to date
+        query += " ORDER BY p.photo_taken DESC"
+
+    query += " LIMIT 100"
+
+    # Execute query
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    conn.close()
+
+    # Format results for frontend
+    photos = []
+    for row in results:
+        photos.append({
+            'id': row[0],
+            'title': row[1],
+            'country': row[2],
+            'date_taken': row[3].isoformat() if row[3] else None,
+            'thumbnail_url': f"/thumbnail/{row[0]}",
+            'file_size': row[5] if row[5] else 0
+        })
+
+    return photos
+
+def get_photo_details(photo_id):
+    """Get detailed information for a specific photo including people"""
+    conn = psycopg2.connect(**db_config)
+    cursor = conn.cursor()
+
+    # Get photo details
+    cursor.execute("""
+        SELECT id, file_name, country, photo_taken, file_path, thumbnail_path, file_size
+        FROM photofetchr.pictures
+        WHERE id = %s
+    """, (photo_id,))
+
+    result = cursor.fetchone()
+    if not result:
+        conn.close()
+        return None
+
+    # Get people in photo
+    cursor.execute("""
+        SELECT pe.name
+        FROM photofetchr.person_picture pp
+        INNER JOIN photofetchr.people pe ON pe.id = pp.peopleid
+        WHERE pp.pictureid = %s
+        ORDER BY pe.name
+    """, (photo_id,))
+
+    people_results = cursor.fetchall()
+    people = [person[0] for person in people_results]
+
+    conn.close()
+
+    # Format photo details
+    photo = {
+        'id': result[0],
+        'title': result[1],
+        'country': result[2],
+        'date_taken': result[3].isoformat() if result[3] else None,
+        'file_path': result[4],
+        'thumbnail_path': result[5],
+        'file_size': result[6] if result[6] else 0,
+        'image_url': f"/image/{result[0]}",
+        'thumbnail_url': f"/thumbnail/{result[0]}",
+        'people': people
+    }
+
+    return photo
 
 @app.template_filter('format_number')
 def format_number(value):
@@ -112,7 +297,16 @@ def format_date(value):
         return value.strftime('%Y-%m-%d')
     return value
 
-# Function to select unique names from database
+@app.route('/api/people')
+def api_people():
+    """
+    Return list of people in json format for checkbox population
+    """
+    people = get_people()
+    # Convert tuple list to simple list of names
+    people_names = [person[0] if isinstance(person, tuple) else person for person in people]
+    return jsonify(people_names)
+
 def get_people():
     """
     Get unique names from the database
@@ -124,7 +318,14 @@ def get_people():
     conn.close()
     return people_list
 
-# Function to select unique countries from database
+@app.route('/api/countries')
+def api_countries():
+    """
+    Return list of countries in json format for dropdown population
+    """
+    countries = get_country()
+    return jsonify(countries)
+
 def get_country():
     """
     Get unique countries from the database
@@ -135,95 +336,6 @@ def get_country():
     country_list = [country[0] for country in cur.fetchall()]
     conn.close()
     return country_list
-
-# Main screen for querying the database
-# @app.route('/', methods=['GET'])
-# def dropdown():
-#     """
-#     Render the main layout with dropdowns for people and countries
-#     """
-#     people_list = get_people()
-#     country_list = get_country()
-#     return render_template('layout.html', people=people_list, countries=country_list)
-
-# Route for images display
-@app.route('/filter_images', methods=['POST'])
-def filter_images():
-    """
-    Filter images based on user input and display results
-    """
-    ################### Date filters ##########################
-    # Extract the start and end date variables from the form
-    start_date = request.form['start_date']
-    end_date = request.form['end_date']
-
-    # Set potential default values
-    default_start_date = '1999-01-01' 
-    default_end_date = date.today()
-
-    # Check if start_date is not chosen or is an empty string
-    if not start_date:
-        start_date = default_start_date
-
-    # Check if end_date is not chosen or is an empty string
-    if not end_date:
-        end_date = default_end_date
-
-    ################### Country filters ##########################
-    # Get the list of selected country codes from the submitted form
-    selected_countries = request.form.getlist('countryfilter')
-
-    country_list = get_country()
-    # Convert the list to a comma-separated string
-    if not selected_countries:
-        selected_country_names = "', '".join(country_list) 
-    else:
-        selected_country_names = "', '".join(selected_countries) 
-
-    ################### People filters ##########################
-    # Create the filter_values list
-    filter_values = []
-    query_parts = []
-
-    # Extract values from the people filter
-    selected_people = request.form.getlist('peoplefilter')
-
-    # Extract values from dynamically added person filters
-    for i in range(len(selected_people)):
-        alias = f"PE{i+1}"
-        filter_values.append(f"{alias}.name = '{selected_people[i-1]}' AND")
-        query_parts.append(f"INNER JOIN photofetchr.person_picture AS PP{i+1} ON PP{i+1}.pictureid = PIC.id")
-        query_parts.append(f"INNER JOIN photofetchr.people AS {alias} ON {alias}.id = PP{i+1}.peopleid")
-    
-    ################### Text box filter ##########################
-    user_string = request.form['tekst-box']
-
-    # Append the filters from above
-    # And construct the SQL query based on selected filters
-    query_parts.append("WHERE 1 = 1 AND")
-    query_parts.extend(filter_values)   
-    query_parts.append(f"PIC.photo_taken BETWEEN '{start_date}' AND '{end_date}'")
-    query_parts.append(f"AND PIC.country IN ('{selected_country_names}')")
-    if user_string:
-        query_parts.append(f"AND LOWER(PIC.file_name) LIKE LOWER('%{user_string}%')")
-    query_parts.append("LIMIT 100;")
-
-    # Build the SQL query from dynamic query parts
-    sql_query = f"""
-        SELECT PIC.id
-        FROM photofetchr.pictures AS PIC
-        {' '.join(query_parts)}
-    """
-    print("SQL Query:", sql_query) # FOR DEBUGGING
-
-    # Execute the SQL query
-    conn = psycopg2.connect(**db_config)
-    cur = conn.cursor()
-    cur.execute(sql_query)
-    results = cur.fetchall()
-
-    enumerated_images = [(i, image_id[0]) for i, image_id in enumerate(results)]
-    return render_template('result.html', enumerated_images=enumerated_images)
 
 # Implement the random picture button by fetching a random ID from the database and 
 # loading image from render_image function through a new route
@@ -256,10 +368,17 @@ def get_image_from_filesystem(image_id):
     cur.close()
     conn.close()
     
-    if result and result[0] and os.path.exists(result[0]):
-        with open(result[0], 'rb') as f:
-            return f.read()
-    return None
+    # if result and result[0] and os.path.exists(result[0]):
+    #     with open(result[0], 'rb') as f:
+    #         return f.read()
+    if result and result[0]:
+        # Replace /photos/ with your local Windows path
+        thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
+        
+        if os.path.exists(thumbnail_path):
+            with open(thumbnail_path, 'rb') as f:
+                return f.read()
+    # return None
 
 def get_thumbnail(image_id):
     """
@@ -287,7 +406,6 @@ def get_thumbnail(image_id):
     return get_image_from_filesystem(image_id)
 
 
-# Function to render the image
 def render_image(image_data):
     """
     Render image from binary data
@@ -298,7 +416,6 @@ def render_image(image_data):
     image_data = output_buffer.getvalue()
     return Response(image_data, content_type='image/jpeg')
 
-# Create a route for each individual picture
 @app.route('/image/<int:image_id>')
 def show_image(image_id):
     """

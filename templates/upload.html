@@ -1,80 +1,602 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Upload Photos</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
-        .form-group { margin: 15px 0; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
-        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; }
-        .results { margin-top: 20px; padding: 10px; background: #f0f0f0; }
-        .success { color: green; }
-        .error { color: red; }
-        .required { color: red; }
-    </style>
-</head>
-<body>
-    <h2>Upload Photos</h2>
-    
-    <form id="uploadForm" enctype="multipart/form-data">
-        <div class="form-group">
-            <label>Select Photos:</label>
-            <input type="file" name="photos" multiple accept="image/*" required>
-        </div>
-        
-        <div class="form-group">
-            <label>Country <span class="required">*</span>:</label>
-            <input type="text" name="country" placeholder="Denmark" required>
-        </div>
-        
-        <div class="form-group">
-            <label>Date (optional - leave empty for today):</label>
-            <input type="date" name="date" placeholder="YYYY-MM-DD">
-        </div>
-        
-        <div class="form-group">
-            <label>People:</label>
-            <select name="people" multiple size="5">
-                {% for person in people %}
-                <option value="{{ person[0] }}">{{ person[0] }}</option>
-                {% endfor %}
-            </select>
-            <small>Hold Ctrl to select multiple</small>
-        </div>
-        
-        <button type="submit">Upload</button>
-    </form>
-    
-    <div id="results" class="results" style="display:none;"></div>
-    
-    <a href="/">← Back</a>
+{% extends "base.html" %}
 
-    <script>
-        document.getElementById('uploadForm').onsubmit = function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            document.getElementById('results').innerHTML = 'Uploading...';
-            document.getElementById('results').style.display = 'block';
-            
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                let html = '<h3>Results:</h3>';
-                data.forEach(result => {
-                    if (result.success) {
-                        html += `<p class="success">✓ ${result.filename} (ID: ${result.id}, Date: ${result.date})</p>`;
-                    } else {
-                        html += `<p class="error">✗ ${result.filename}: ${result.error}</p>`;
-                    }
-                });
-                document.getElementById('results').innerHTML = html;
-            });
-        };
-    </script>
-</body>
-</html>
+{% block title %}Upload - PhotoFetchr{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="upload-header">
+        <div class="breadcrumb">
+            <a href="{{ url_for('homepage') }}" class="breadcrumb-btn">Home</a>
+            <span class="breadcrumb-separator">›</span>
+            <span>Upload Photos</span>
+        </div>
+        <h2>Upload Photos</h2>
+        <p>Add new photos to your collection with metadata</p>
+    </div>
+
+    <!-- Upload Form -->
+    <form id="upload-form" method="POST" enctype="multipart/form-data" action="{{ url_for('upload') }}">
+
+        <!-- File Upload Area -->
+        <div class="upload-section">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-content">
+                    <div class="upload-icon">📤</div>
+                    <h3>Drag & Drop Photos Here</h3>
+                    <p>or <button type="button" class="upload-browse" id="browse-files">browse files</button></p>
+                    <input type="file" name="photos" id="file-input" multiple accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+                    <div class="upload-info">
+                        <small>Supports: JPG, JPEG, PNG, WEBP</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Files Preview -->
+            <div class="upload-queue" id="upload-queue" style="display: none;">
+                <h4>Selected Files</h4>
+                <div class="file-list" id="file-list">
+                    <!-- File items will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Metadata Section -->
+        <div class="metadata-section">
+            <h4>Photo Information</h4>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="country" class="form-label">Country *</label>
+                    <select name="country" id="country" class="form-control" required>
+                        <option value="">Select Country</option>
+                        {% for country in countries %}
+                        <option value="{{ country }}">{{ country }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="date" class="form-label">Date Taken (Optional)</label>
+                    <input type="date" name="date" id="date" class="form-control">
+                    <small class="form-help">Leave empty to use current date</small>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">People in Photos (Optional)</label>
+                <div class="people-selection">
+                    <div class="people-search">
+                        <input type="text" class="form-control" placeholder="Search people..." id="people-search">
+                    </div>
+                    <div class="people-grid">
+                        {% for person in people %}
+                        <label class="person-checkbox">
+                            <input type="checkbox" name="people" value="{{ person[0] if person is sequence else person }}">
+                            <span class="checkbox-label">{{ person[0] if person is sequence else person }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Actions -->
+        <div class="upload-actions">
+            <button type="button" class="btn btn--outline" id="clear-files">Clear Files</button>
+            <button type="submit" class="btn btn--primary" id="upload-btn" disabled>
+                <span class="btn-text">Upload Photos</span>
+                <span class="btn-loader" style="display: none;">⏳ Uploading...</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Results Section -->
+    <div class="results-section" id="results-section" style="display: none;">
+        <h4>Upload Results</h4>
+        <div class="results-list" id="results-list">
+            <!-- Results will appear here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.upload-header h2 {
+    color: var(--color-text);
+    margin-bottom: var(--space-8);
+}
+
+.upload-header p {
+    color: var(--color-text-secondary);
+}
+
+.upload-section {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-24);
+    margin-bottom: var(--space-24);
+    border: 1px solid var(--color-border);
+    max-width: none; 
+}
+
+.upload-area {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-base);
+    padding: var(--space-32);
+    text-align: center;
+    transition: all var(--duration-fast) var(--ease-standard);
+    background: var(--color-background);
+    max-width: none;
+}
+
+.upload-area.dragover {
+    border-color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), 0.1);
+}
+
+.upload-content h3 {
+    color: var(--color-text);
+    margin: var(--space-16) 0;
+}
+
+.upload-icon {
+    font-size: var(--font-size-5xl);
+    margin-bottom: var(--space-16);
+}
+
+.upload-browse {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.upload-info {
+    margin-top: var(--space-16);
+}
+
+.upload-info small {
+    color: var(--color-text-secondary);
+}
+
+.metadata-section {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-24);
+    margin-bottom: var(--space-24);
+    border: 1px solid var(--color-border);
+}
+
+.metadata-section h4 {
+    color: var(--color-text);
+    margin-bottom: var(--space-20);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-20);
+}
+
+.form-group {
+    margin-bottom: var(--space-20);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: var(--space-8);
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.form-help {
+    display: block;
+    margin-top: var(--space-4);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.people-selection {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-base);
+    background: var(--color-background);
+    position: relative
+}
+
+.people-search {
+    margin-bottom: var(--space-12);
+    position: sticky;
+    top: 0;
+    background: var(--color-background);
+    z-index: 10;
+    margin: 0;
+}
+
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-8);
+    padding: var(--space-8);
+}
+
+.person-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-4);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.person-checkbox:hover {
+    background: var(--color-secondary);
+}
+
+.checkbox-label {
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+}
+
+.upload-queue {
+    margin-top: var(--space-20);
+    padding-top: var(--space-20);
+    border-top: 1px solid var(--color-border);
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-12);
+    background: var(--color-background);
+    border-radius: var(--radius-base);
+    border: 1px solid var(--color-border);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+}
+
+.file-name {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.file-size {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.file-remove {
+    background: var(--color-danger);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--space-4) var(--space-8);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+}
+
+.upload-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.results-section {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-24);
+    border: 1px solid var(--color-border);
+}
+
+.results-section h4 {
+    color: var(--color-text);
+    margin-bottom: var(--space-16);
+}
+
+.result-item {
+    padding: var(--space-12);
+    margin-bottom: var(--space-8);
+    border-radius: var(--radius-base);
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+}
+
+.result-item.success {
+    background: rgba(var(--color-success-rgb), 0.1);
+    border: 1px solid var(--color-success);
+    color: var(--color-success);
+}
+
+.result-item.error {
+    background: rgba(var(--color-danger-rgb), 0.1);
+    border: 1px solid var(--color-danger);
+    color: var(--color-danger);
+}
+
+.btn-loader {
+    display: none;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .people-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .upload-actions {
+        flex-direction: column;
+        gap: var(--space-12);
+    }
+}
+</style>
+
+<script>
+// Upload functionality with Python backend integration
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file-input');
+    const browseBtn = document.getElementById('browse-files');
+    const uploadArea = document.getElementById('upload-area');
+    const uploadQueue = document.getElementById('upload-queue');
+    const fileList = document.getElementById('file-list');
+    const uploadForm = document.getElementById('upload-form');
+    const uploadBtn = document.getElementById('upload-btn');
+    const clearBtn = document.getElementById('clear-files');
+    const peopleSearch = document.getElementById('people-search');
+    const resultsSection = document.getElementById('results-section');
+    const resultsList = document.getElementById('results-list');
+
+    let selectedFiles = [];
+
+    // Browse files button
+    browseBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(Array.from(e.target.files));
+    });
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files).filter(file => 
+            file.type.startsWith('image/')
+        );
+        handleFiles(files);
+    });
+
+    // Handle file selection
+    function handleFiles(files) {
+        files.forEach(file => {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+                return;
+            }
+
+            if (!selectedFiles.find(f => f.name === file.name)) {
+                selectedFiles.push(file);
+            }
+        });
+
+        updateFileList();
+        updateUploadButton();
+    }
+
+    // Update file list display
+    function updateFileList() {
+        if (selectedFiles.length === 0) {
+            uploadQueue.style.display = 'none';
+            return;
+        }
+
+        uploadQueue.style.display = 'block';
+        fileList.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div class="file-info">
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                </div>
+                <button type="button" class="file-remove" onclick="removeFile(${index})">Remove</button>
+            `;
+            fileList.appendChild(fileItem);
+        });
+    }
+
+    // Remove file
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        updateFileList();
+        updateUploadButton();
+    }
+
+    // Clear all files
+    clearBtn.addEventListener('click', () => {
+        selectedFiles = [];
+        fileInput.value = '';
+        updateFileList();
+        updateUploadButton();
+        resultsSection.style.display = 'none';
+    });
+
+    // Update upload button state
+    function updateUploadButton() {
+        uploadBtn.disabled = selectedFiles.length === 0;
+    }
+
+    // People search functionality
+    peopleSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const checkboxes = document.querySelectorAll('.person-checkbox');
+
+        checkboxes.forEach(checkbox => {
+            const label = checkbox.querySelector('.checkbox-label').textContent.toLowerCase();
+            if (label.includes(searchTerm)) {
+                checkbox.style.display = 'flex';
+            } else {
+                checkbox.style.display = 'none';
+            }
+        });
+    });
+
+    // Form submission
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (selectedFiles.length === 0) {
+            alert('Please select files to upload.');
+            return;
+        }
+
+        const country = document.getElementById('country').value;
+        if (!country) {
+            alert('Please select a country.');
+            return;
+        }
+
+        // Show loading state
+        const btnText = uploadBtn.querySelector('.btn-text');
+        const btnLoader = uploadBtn.querySelector('.btn-loader');
+        btnText.style.display = 'none';
+        btnLoader.style.display = 'inline';
+        uploadBtn.disabled = true;
+
+        // Create FormData
+        const formData = new FormData();
+
+        // Add files
+        selectedFiles.forEach(file => {
+            formData.append('photos', file);
+        });
+
+        // Add metadata
+        formData.append('country', country);
+
+        const date = document.getElementById('date').value;
+        if (date) {
+            formData.append('date', date);
+        }
+
+        // Add selected people
+        const selectedPeople = Array.from(document.querySelectorAll('input[name="people"]:checked'))
+            .map(cb => cb.value);
+        selectedPeople.forEach(person => {
+            formData.append('people', person);
+        });
+
+        // Submit to Flask backend
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+
+            // Reset form on success
+            const hasSuccess = data.some(result => result.success);
+            if (hasSuccess) {
+                selectedFiles = [];
+                fileInput.value = '';
+                updateFileList();
+                uploadForm.reset();
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            displayResults([{
+                success: false,
+                filename: 'Upload Error',
+                error: 'Connection error occurred'
+            }]);
+        })
+        .finally(() => {
+            // Reset button state
+            btnText.style.display = 'inline';
+            btnLoader.style.display = 'none';
+            updateUploadButton();
+        });
+    });
+
+    // Display upload results
+    function displayResults(results) {
+        resultsSection.style.display = 'block';
+        resultsList.innerHTML = '';
+
+        results.forEach(result => {
+            const resultItem = document.createElement('div');
+            resultItem.className = `result-item ${result.success ? 'success' : 'error'}`;
+
+            if (result.success) {
+                resultItem.innerHTML = `
+                    <span>✓</span>
+                    <div>
+                        <strong>${result.filename}</strong> uploaded successfully
+                        <br><small>ID: ${result.id} | Date: ${result.date}</small>
+                    </div>
+                `;
+            } else {
+                resultItem.innerHTML = `
+                    <span>✗</span>
+                    <div>
+                        <strong>${result.filename}</strong> failed
+                        <br><small>${result.error}</small>
+                    </div>
+                `;
+            }
+
+            resultsList.appendChild(resultItem);
+        });
+
+        // Scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Utility function
+    function formatFileSize(bytes) {
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        if (bytes === 0) return '0 Bytes';
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    }
+});
+</script>
+{% endblock %}

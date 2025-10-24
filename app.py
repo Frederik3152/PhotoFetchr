@@ -474,7 +474,8 @@ def upload():
     
     # GET - show form
     people_list = get_people()
-    return render_template('upload.html', people=people_list)
+    country_list = get_country()
+    return render_template('upload.html', people=people_list, countries=country_list)
 
 def add_photo_to_db(file, country, people, custom_date=None):
     """Add single photo to database and filesystem"""

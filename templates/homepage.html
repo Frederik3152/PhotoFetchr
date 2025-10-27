@@ -52,7 +52,7 @@
         <div class="photos-grid">
             {% if recent_photos %}
                 {% for photo in recent_photos %}
-                <div class="photo-card" data-href="{{ photo.thumbnail_url }}">
+                <div class="photo-card" onclick="showPhotoDetail('{{ photo.id }}')">
                     <div class="photo-thumbnail">
                         <img src="{{ photo.thumbnail_url }}" 
                              alt="{{ photo.file_name }}" loading="lazy">
@@ -82,5 +82,41 @@
             {% endif %}
         </div>
     </section>
+</div>
+<div class="photo-detail-modal" id="photo-detail" style="display: none;">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-container">
+        <button class="modal-close" id="detail-close">×</button>
+        <div class="detail-content">
+            <div class="detail-image-section">
+                <img id="detail-image" src="" alt="" class="detail-photo">
+            </div>
+            <div class="detail-sidebar">
+                <h2 id="detail-title" class="photo-title">Photo Title</h2>
+
+                <div class="metadata-grid">
+                    <div class="meta-item">
+                        <span class="meta-label">📅 Date Taken</span>
+                        <span class="meta-value" id="detail-date">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">🌍 Country</span>
+                        <span class="meta-value" id="detail-country">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">📁 File Size</span>
+                        <span class="meta-value" id="detail-filesize">-</span>
+                    </div>
+                </div>
+
+                <div class="people-section">
+                    <h4>👥 People in Photo</h4>
+                    <div class="people-tags" id="detail-people">
+                        <!-- People tags populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

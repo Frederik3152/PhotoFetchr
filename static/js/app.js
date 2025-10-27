@@ -1,5 +1,3 @@
-// PhotoFetchr Flask JavaScript - Adapted from SPA to Flask routing
-
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('PhotoFetchr Flask version initializing...');
@@ -21,6 +19,19 @@ function setTheme(theme) {
     localStorage.setItem('photofetchr-theme', theme);
 }
 
+const photoDetailModal = document.getElementById('photo-detail');
+const modalBackdrop = document.getElementById('modal-backdrop');
+const detailClose = document.getElementById('detail-close');
+// Make sure photo detail overlay can be closed on all pages
+if (photoDetailModal && modalBackdrop && detailClose) {
+    detailClose.addEventListener('click', closePhotoDetail);
+    modalBackdrop.addEventListener('click', closePhotoDetail);
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && photoDetailModal.style.display === 'block') {
+            closePhotoDetail();
+        }
+    });
+}
 // Navigation - Flask uses server-side routing
 function initializeNavigation() {
     const navBtns = document.querySelectorAll('.nav-btn');
@@ -126,9 +137,6 @@ const searchResults = document.getElementById('search-results');
 const resultsCount = document.getElementById('results-count');
 const activeFiltersContainer = document.getElementById('active-filters');
 const clearFiltersBtn = document.getElementById('clear-filters');
-const photoDetailModal = document.getElementById('photo-detail');
-const modalBackdrop = document.getElementById('modal-backdrop');
-const detailClose = document.getElementById('detail-close');
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
@@ -172,17 +180,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Clear filters
     clearFiltersBtn.addEventListener('click', clearAllFilters);
-
-    // Photo detail modal
-    detailClose.addEventListener('click', closePhotoDetail);
-    modalBackdrop.addEventListener('click', closePhotoDetail);
-
-    // Close modal with escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && photoDetailModal.style.display === 'block') {
-            closePhotoDetail();
-        }
-    });
 
     // Perform initial search to show some results
     performSearch();

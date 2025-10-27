@@ -427,6 +427,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const peopleSearch = document.getElementById('people-search');
     const resultsSection = document.getElementById('results-section');
     const resultsList = document.getElementById('results-list');
+    const countrySelect = document.getElementById('country-select');
+    const countryNewInput = document.getElementById('country-new');
 
     let selectedFiles = [];
 
@@ -497,6 +499,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="file-remove" onclick="removeFile(${index})">Remove</button>
             `;
             fileList.appendChild(fileItem);
+        });
+    }
+
+    if (countrySelect && countryNewInput) {
+        countrySelect.addEventListener('change', function() {
+            if (this.value === '__NEW__') {
+                // Show the new country input field
+                countryNewInput.style.display = 'block';
+                countryNewInput.required = true;
+                countryNewInput.focus();
+                // Clear and disable the select so the text input is used
+                this.removeAttribute('name');
+            } else {
+                // Hide the new country input field
+                countryNewInput.style.display = 'none';
+                countryNewInput.required = false;
+                countryNewInput.value = '';
+                // Re-enable the select
+                this.setAttribute('name', 'country');
+            }
+        });
+
+        // If user starts typing in new country, keep it visible
+        countryNewInput.addEventListener('input', function() {
+            if (this.value.length > 0) {
+                countrySelect.value = '__NEW__';
+            }
         });
     }
 

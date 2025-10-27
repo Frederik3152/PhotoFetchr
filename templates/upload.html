@@ -46,14 +46,17 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="country" class="form-label">Country *</label>
-                    <select name="country" id="country" class="form-control" required>
-                        <option value="">Select Country</option>
-                        {% for country in countries %}
-                        <option value="{{ country }}">{{ country }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+                        <label for="country" class="form-label">Country *</label>
+                        <select name="country-select" id="country-select" class="form-control" required>
+                            <option value="">Select Country</option>
+                            {% for country in countries %}
+                            <option value="{{ country }}">{{ country }}</option>
+                            {% endfor %}
+                            <option value="__NEW__">➕ Add Country</option>
+                        </select>
+                        <input type="text" name="country" id="country-new" class="form-control" 
+                            placeholder="Enter new country name" style="display: none; margin-top: 10px;">
+                    </div>
 
                 <div class="form-group">
                     <label for="date" class="form-label">Date Taken (Optional)</label>

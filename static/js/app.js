@@ -106,6 +106,39 @@ function smoothScrollTo(elementId) {
     }
 }
 
+// Track current rotation angle
+let currentRotation = 0;
+
+// Initialize rotation button (add inside your DOMContentLoaded)
+const rotateBtn = document.getElementById('rotate-btn');
+if (rotateBtn) {
+    rotateBtn.addEventListener('click', rotateDetailImage);
+}
+
+// Rotation function
+function rotateDetailImage() {
+    const image = document.getElementById('detail-image');
+    if (!image || !image.src) return;
+    
+    // Increment by 90 degrees
+    currentRotation = (currentRotation + 90) % 360;
+    
+    // Apply rotation using CSS transform
+    image.style.transform = `rotate(${currentRotation}deg)`;
+    
+    // Visual feedback on button
+    const btn = document.getElementById('rotate-btn');
+    if (btn) {
+        const svg = btn.querySelector('svg');
+        if (svg) {
+            svg.style.transform = 'rotate(90deg)';
+            setTimeout(() => {
+                svg.style.transform = 'rotate(0deg)';
+            }, 200);
+        }
+    }
+}
+
 // Add to window for global access
 window.PhotoFetchr = {
     showLoading,
@@ -409,6 +442,15 @@ async function showPhotoDetail(photoId) {
 }
 
 function closePhotoDetail() {
+    const photoDetailModal = document.getElementById('photo-detail');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+
+    currentRotation = 0;
+    const image = document.getElementById('detail-image');
+    if (image) {
+        image.style.transform = 'rotate(0deg)';
+    }
+
     photoDetailModal.style.display = 'none';
     document.body.style.overflow = 'auto';
 }

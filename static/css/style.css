@@ -1182,6 +1182,56 @@ select.form-control {
   flex-shrink: 0;
 }
 
+.rotate-btn {
+    position: absolute;
+    top: var(--space-20);
+    right: 70px;               /* Positioned left of close button */
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 1001;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.rotate-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.rotate-btn:active {
+    transform: scale(0.95);
+}
+
+.rotate-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease;
+}
+
+.rotate-btn:active svg {
+    transform: rotate(90deg);
+}
+
+#detail-image {
+    transition: transform 0.3s ease-in-out;
+    transform-origin: center center;
+}
+
+@media (max-width: 768px) {
+    .rotate-btn {
+        top: auto;
+        bottom: 80px;
+        right: 20px;
+    }
+}
+
 .metadata-grid {
   display: grid;
   grid-template-columns: 1fr;

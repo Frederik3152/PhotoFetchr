@@ -3,12 +3,11 @@ from flask import Flask, render_template, request, Response, jsonify
 import psycopg2
 from PIL import Image
 from io import BytesIO
-from datetime import date, datetime
+from datetime import datetime
 from config import config
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
-import shutil
 
 app = Flask(__name__, static_folder='static')
 
@@ -86,6 +85,7 @@ def get_recent_photos():
 
 @app.route('/')
 def homepage():
+    # Get data needed for the homepage
     stats = get_photo_stats()
     recent_photos = get_recent_photos()
     return render_template('homepage.html', stats=stats, recent_photos=recent_photos)
@@ -233,7 +233,9 @@ def search_photos(search_text='', countries=[], people=[], date_from='', date_to
     return photos
 
 def get_photo_details(photo_id):
-    """Get detailed information for a specific photo including people"""
+    """
+    Get detailed information for a specific photo including people
+    """
     conn = psycopg2.connect(**db_config)
     cursor = conn.cursor()
 
@@ -336,26 +338,6 @@ def get_country():
     country_list = [country[0] for country in cur.fetchall()]
     conn.close()
     return country_list
-
-# Implement the random picture button by fetching a random ID from the database and 
-# loading image from render_image function through a new route
-@app.route('/random-pic')
-def random_picture():
-    """
-    Fetch a random picture ID from the database and return its URL
-    """
-    conn = psycopg2.connect(**db_config)
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM photofetchr.pictures WHERE file_path IS NOT NULL ORDER BY RANDOM() LIMIT 1")
-    result = cur.fetchone()
-    conn.close()
-    
-    if result:
-        random_image = result[0]
-        random_image_url = f"/image/{random_image}"
-        return jsonify({"imageUrl": random_image_url})
-    else:
-        return jsonify({"error": "No images found"}), 404
 
 def get_image_from_filesystem(image_id):
     """
@@ -478,7 +460,9 @@ def upload():
     return render_template('upload.html', people=people_list, countries=country_list)
 
 def add_photo_to_db(file, country, people, custom_date=None):
-    """Add single photo to database and filesystem"""
+    """
+    Add single photo to database and filesystem
+    """
     try:
         # Get next ID
         conn = psycopg2.connect(**db_config)

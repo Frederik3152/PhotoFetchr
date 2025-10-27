@@ -8,6 +8,7 @@ from config import config
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
+import platform
 
 app = Flask(__name__, static_folder='static')
 
@@ -350,13 +351,15 @@ def get_image_from_filesystem(image_id):
     cur.close()
     conn.close()
     
-    # if result and result[0] and os.path.exists(result[0]):
-    #     with open(result[0], 'rb') as f:
-    #         return f.read()
     if result and result[0]:
-        # Replace /photos/ with your local Windows path
-        thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
+        if platform.system() == 'Windows':
+            # Local Windows development
+            thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
+        else:
+            # Production (Linux/Docker) - use path as stored in database
+            thumbnail_path = result[0]
         
+        # Check if file exists and return its contents
         if os.path.exists(thumbnail_path):
             with open(thumbnail_path, 'rb') as f:
                 return f.read()
@@ -372,15 +375,16 @@ def get_thumbnail(image_id):
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
-    # if result and result[0] and os.path.exists(result[0]):
-    #     with open(result[0], 'rb') as f:
-    #         return f.read()
-        
+
     if result and result[0]:
-        # Replace /photos/ with your local Windows path
-        thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
+        if platform.system() == 'Windows':
+            # Local Windows development
+            thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
+        else:
+            # Production (Linux/Docker) - use path as stored in database
+            thumbnail_path = result[0]
         
+        # Check if file exists and return its contents
         if os.path.exists(thumbnail_path):
             with open(thumbnail_path, 'rb') as f:
                 return f.read()

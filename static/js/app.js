@@ -616,9 +616,18 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const country = document.getElementById('country').value;
+        let country = '';
+    
+        if (countrySelect.value === '__NEW__') {
+            // User is adding a new country
+            country = countryNewInput.value.trim();
+        } else {
+            // User selected from dropdown
+            country = countrySelect.value;
+        }
+
         if (!country) {
-            alert('Please select a country.');
+            alert('Please select or enter a country.');
             return;
         }
 

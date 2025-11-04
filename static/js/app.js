@@ -506,11 +506,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle file selection
     function handleFiles(files) {
         files.forEach(file => {
-            if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                alert(`File ${file.name} is too large. Maximum size is 10MB.`);
-                return;
-            }
-
             if (!selectedFiles.find(f => f.name === file.name)) {
                 selectedFiles.push(file);
             }

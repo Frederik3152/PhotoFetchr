@@ -34,11 +34,11 @@ def get_photo_stats():
     cursor.execute("SELECT COUNT(DISTINCT country) FROM photofetchr.pictures WHERE country IS NOT NULL")
     total_countries = cursor.fetchone()[0]
     
-    # Count people (adjust table name as needed)
+    # Count people
     cursor.execute("SELECT COUNT(DISTINCT peopleid) FROM photofetchr.person_picture")
     total_people = cursor.fetchone()[0]
     
-    # Calculate storage (adjust column names)
+    # Calculate storage used
     cursor.execute("SELECT SUM(file_size) FROM photofetchr.pictures")
     storage_bytes = cursor.fetchone()[0] or 0
     storage_used = f"{round(storage_bytes / (1024 **3), 2)}GB"
@@ -363,7 +363,6 @@ def get_image_from_filesystem(image_id):
         if os.path.exists(thumbnail_path):
             with open(thumbnail_path, 'rb') as f:
                 return f.read()
-    # return None
 
 def get_thumbnail(image_id):
     """

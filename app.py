@@ -5,6 +5,7 @@ from PIL import Image
 from io import BytesIO
 from datetime import datetime
 from config import config
+from imaging import upright
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
@@ -450,22 +451,6 @@ def get_people_with_ids():
     conn.close()
     return people
 
-# EXIF orientation -> the transpose that turns the image upright. Pillow's
-# ImageOps.exif_transpose does the same but also rewrites the EXIF block, which fails on
-# photos with out-of-range values in it; only the rotation is needed for thumbnails.
-ORIENTATION = {2: Image.Transpose.FLIP_LEFT_RIGHT, 3: Image.Transpose.ROTATE_180,
-               4: Image.Transpose.FLIP_TOP_BOTTOM, 5: Image.Transpose.TRANSPOSE,
-               6: Image.Transpose.ROTATE_270, 7: Image.Transpose.TRANSVERSE,
-               8: Image.Transpose.ROTATE_90}
-
-def upright(image):
-    try:
-        method = ORIENTATION.get(image.getexif().get(0x0112, 1))
-    except Exception:
-        method = None
-    # FLIP_LEFT_RIGHT is 0, so compare with None rather than testing truthiness
-    return image.transpose(method) if method is not None else image
-
 def exif_date(image):
     """
     The date a photo was taken, from its EXIF data, or None
@@ -596,6 +581,12 @@ def add_photo_to_db(filename, data, country, person_ids, custom_date=None):
     except Exception as e:
         return {'success': False, 'filename': filename, 'error': str(e)}
 
+
+# Temporary: the one-off review of faces in existing photos (review.py). Switched on with
+# ENABLE_FACE_REVIEW=1; delete review.py, templates/review.html and these lines when done.
+if os.environ.get('ENABLE_FACE_REVIEW'):
+    from review import review
+    app.register_blueprint(review)
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0")

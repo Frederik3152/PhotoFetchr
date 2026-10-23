@@ -1,7 +1,7 @@
 # Import libraries
 from flask import Flask, render_template, request, Response, jsonify
 import psycopg2
-from PIL import Image
+from PIL import Image, ImageOps
 from io import BytesIO
 from datetime import datetime
 from config import config
@@ -9,6 +9,8 @@ import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import platform
+import threading
+import requests
 
 app = Flask(__name__, static_folder='static')
 
@@ -426,43 +428,109 @@ def show_thumbnail(image_id):
 # Simple upload configuration
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 
+# Where new uploads are written. The database stores absolute paths under it.
+PHOTOS_ROOT = os.environ.get('PHOTOS_ROOT', '/photos')
+# The faces service (faces/ in this repo). Optional: without it, uploads work as before,
+# just without people suggestions.
+FACES_URL = os.environ.get('FACES_URL')
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route('/upload')
 def upload():
-    if request.method == 'POST':
-        files = request.files.getlist('photos')
-        country = request.form.get('country', '').strip()
-        people = request.form.getlist('people')
-        custom_date = request.form.get('date', '').strip()
-        
-        # Validate mandatory country
-        if not country:
-            return jsonify([{'success': False, 'error': 'Country is required'}])
-        
-        # Parse custom date if provided
-        photo_date = None
-        if custom_date:
-            try:
-                photo_date = datetime.strptime(custom_date, '%Y-%m-%d').date()
-            except ValueError:
-                return jsonify([{'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD'}])
-        
-        results = []
-        for file in files:
-            if file and allowed_file(file.filename):
-                result = add_photo_to_db(file, country, people, photo_date)
-                results.append(result)
-        
-        return jsonify(results)
-    
-    # GET - show form
-    people_list = get_people()
-    country_list = get_country()
-    return render_template('upload.html', people=people_list, countries=country_list)
+    return render_template('upload.html', people=get_people_with_ids(), countries=get_country(),
+                           faces_enabled=bool(FACES_URL))
 
-def add_photo_to_db(file, country, people, custom_date=None):
+def get_people_with_ids():
+    conn = psycopg2.connect(**db_config)
+    cur = conn.cursor()
+    cur.execute("SELECT id, name FROM photofetchr.people ORDER BY name ASC")
+    people = [{'id': row[0], 'name': row[1]} for row in cur.fetchall()]
+    conn.close()
+    return people
+
+def exif_date(image):
+    """
+    The date a photo was taken, from its EXIF data, or None
+    """
+    exif = image.getexif()
+    # DateTimeOriginal lives in the Exif sub-IFD; DateTime is the fallback
+    raw = exif.get_ifd(0x8769).get(0x9003) or exif.get(0x0132)
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(str(raw).strip()[:19], '%Y:%m:%d %H:%M:%S').date()
+    except ValueError:
+        return None
+
+@app.route('/api/upload/analyze', methods=['POST'])
+def api_upload_analyze():
+    """
+    Read one photo before it is uploaded: its date, and the faces in it with suggested people
+    """
+    file = request.files.get('photo')
+    if not file:
+        return jsonify({'error': 'No photo sent'}), 400
+    data = file.read()
+    try:
+        taken = exif_date(Image.open(BytesIO(data)))
+    except Exception:
+        taken = None
+    result = {'taken': taken.isoformat() if taken else None, 'faces': None}
+    if FACES_URL:
+        try:
+            # Fail fast when the faces service is down: connect within 3 s, answer within 30 s
+            r = requests.post(f"{FACES_URL}/analyze", files={'photo': (file.filename, data)}, timeout=(3, 30))
+            r.raise_for_status()
+            result['faces'] = r.json()['faces']
+        except Exception as e:
+            app.logger.warning('Faces service unavailable: %s', e)
+    return jsonify(result)
+
+@app.route('/api/upload/photo', methods=['POST'])
+def api_upload_photo():
+    """
+    Save one photo with its own country, date and people
+    """
+    file = request.files.get('photo')
+    if not file or not allowed_file(file.filename):
+        return jsonify({'success': False, 'filename': file.filename if file else '', 'error': 'Not a supported image'}), 400
+    country = request.form.get('country', '').strip()
+    if not country:
+        return jsonify({'success': False, 'filename': file.filename, 'error': 'Country is required'}), 400
+
+    photo_date = None
+    if request.form.get('date'):
+        try:
+            photo_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'filename': file.filename, 'error': 'Invalid date, use YYYY-MM-DD'}), 400
+    try:
+        person_ids = sorted({int(p) for p in request.form.getlist('people')})
+    except ValueError:
+        return jsonify({'success': False, 'filename': file.filename, 'error': 'Invalid person'}), 400
+
+    data = file.read()
+    result = add_photo_to_db(file.filename, data, country, person_ids, photo_date)
+    if result['success'] and FACES_URL:
+        # Store the photo's faces in the background; the upload doesn't wait for it
+        threading.Thread(target=index_faces, daemon=True,
+                         args=(result['id'], file.filename, data, request.form.get('assignments') or '{}')).start()
+    return jsonify(result)
+
+def index_faces(picture_id, filename, data, assignments):
+    """
+    Hand a saved photo to the faces service. Faces the uploader confirmed (assignments:
+    face index -> person id) become reference faces for future suggestions.
+    """
+    try:
+        requests.post(f"{FACES_URL}/index", files={'photo': (filename, data)},
+                      data={'picture_id': picture_id, 'assignments': assignments}, timeout=(3, 120)).raise_for_status()
+    except Exception as e:
+        app.logger.warning('Could not index faces for photo %s: %s', picture_id, e)
+
+def add_photo_to_db(filename, data, country, person_ids, custom_date=None):
     """
     Add single photo to database and filesystem
     """
@@ -472,49 +540,45 @@ def add_photo_to_db(file, country, people, custom_date=None):
         cur = conn.cursor()
         cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM photofetchr.pictures")
         photo_id = cur.fetchone()[0]
-        
+
         # Use custom date or current date
         photo_date = custom_date if custom_date else datetime.now().date()
-        
+
         # Generate paths using the photo date
-        filename = f"{photo_date.strftime('%Y%m%d')}_{photo_id:06d}_{secure_filename(file.filename)}"
-        
-        original_path = f"/photos/originals/{photo_date.year}/{photo_date.month:02d}/{filename}"
-        thumb_path = f"/photos/thumbnails/{photo_date.year}/{photo_date.month:02d}/thumb_{filename}"
-        
+        name = f"{photo_date.strftime('%Y%m%d')}_{photo_id:06d}_{secure_filename(filename)}"
+        original_path = f"{PHOTOS_ROOT}/originals/{photo_date.year}/{photo_date.month:02d}/{name}"
+        thumb_path = f"{PHOTOS_ROOT}/thumbnails/{photo_date.year}/{photo_date.month:02d}/thumb_{name}"
+
         # Create directories and save files
         Path(original_path).parent.mkdir(parents=True, exist_ok=True)
         Path(thumb_path).parent.mkdir(parents=True, exist_ok=True)
-        
-        file.save(original_path)
-        
-        # Create thumbnail
+        Path(original_path).write_bytes(data)
+
+        # Create thumbnail, turned the way the camera recorded it
         with Image.open(original_path) as img:
-            img.thumbnail((300, 300))
-            img.save(thumb_path, "JPEG", quality=85)
-        
+            thumb = ImageOps.exif_transpose(img).convert('RGB')
+            thumb.thumbnail((300, 300))
+            thumb.save(thumb_path, "JPEG", quality=85)
+
         # Save to database
         cur.execute("""
             INSERT INTO photofetchr.pictures (id, file_name, country, photo_taken, file_path, thumbnail_path, file_size)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (photo_id, file.filename, country, photo_date, original_path, thumb_path, os.path.getsize(original_path)))
-        
+        """, (photo_id, filename, country, photo_date, original_path, thumb_path, os.path.getsize(original_path)))
+
         # Add people
-        for person_name in people:
-            cur.execute("SELECT id FROM photofetchr.people WHERE name = %s", (person_name,))
-            person_result = cur.fetchone()
-            if person_result:
-                cur.execute("INSERT INTO photofetchr.person_picture (peopleid, pictureid) VALUES (%s, %s)", 
-                          (person_result[0], photo_id))
-        
+        for person_id in person_ids:
+            cur.execute("INSERT INTO photofetchr.person_picture (peopleid, pictureid) VALUES (%s, %s)",
+                        (person_id, photo_id))
+
         conn.commit()
         cur.close()
         conn.close()
-        
-        return {'success': True, 'filename': file.filename, 'id': photo_id, 'date': photo_date.isoformat()}
-        
+
+        return {'success': True, 'filename': filename, 'id': photo_id, 'date': photo_date.isoformat()}
+
     except Exception as e:
-        return {'success': False, 'filename': file.filename, 'error': str(e)}
+        return {'success': False, 'filename': filename, 'error': str(e)}
 
 
 if __name__ == '__main__':

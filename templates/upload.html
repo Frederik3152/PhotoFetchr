@@ -3,102 +3,117 @@
 {% block title %}Upload - PhotoFetchr{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="upload-header">
-        <div class="breadcrumb">
-            <a href="{{ url_for('homepage') }}" class="breadcrumb-btn">Home</a>
-            <span class="breadcrumb-separator">›</span>
-            <span>Upload Photos</span>
+<div class="container uc-page">
+    <div class="upload-header uc-header">
+        <div>
+            <div class="breadcrumb">
+                <a href="{{ url_for('homepage') }}" class="breadcrumb-btn">Home</a>
+                <span class="breadcrumb-separator">›</span>
+                <span>Upload Photos</span>
+            </div>
+            <h2>Upload Photos</h2>
+            <p id="uc-summary">Add photos, check the date, country and people, then upload.</p>
         </div>
-        <h2>Upload Photos</h2>
-        <p>Add new photos to your collection with metadata</p>
+        <button type="button" class="btn btn--outline" id="uc-add-more" hidden>+ Add more photos</button>
     </div>
 
-    <!-- Upload Form -->
-    <form id="upload-form" method="POST" enctype="multipart/form-data" action="{{ url_for('upload') }}">
+    <!-- Drop zone: shown until photos are added -->
+    <div class="upload-area" id="uc-drop">
+        <div class="upload-content">
+            <h3>Drag &amp; drop photos here</h3>
+            <p>or <button type="button" class="upload-browse" id="uc-browse">browse files</button></p>
+            <input type="file" id="uc-file-input" multiple accept="image/jpeg,image/png,image/gif" hidden>
+            <div class="upload-info"><small>JPG, PNG or GIF. The date is read from each photo{% if faces_enabled %}, and people are suggested from their faces{% endif %}.</small></div>
+        </div>
+    </div>
 
-        <!-- File Upload Area -->
-        <div class="upload-section">
-            <div class="upload-area" id="upload-area">
-                <div class="upload-content">
-                    <div class="upload-icon">📤</div>
-                    <h3>Drag & Drop Photos Here</h3>
-                    <p>or <button type="button" class="upload-browse" id="browse-files">browse files</button></p>
-                    <input type="file" name="photos" id="file-input" multiple accept="image/jpeg,image/png,image/gif,image/webp" hidden>
-                    <div class="upload-info">
-                        <small>Supports: JPG, JPEG, PNG, WEBP</small>
-                    </div>
-                </div>
+    <!-- Settings for the whole batch -->
+    <section class="uc-batch" id="uc-batch" aria-label="Settings for the whole batch" hidden>
+        <label class="uc-field">
+            <span class="uc-field-label">Country for all photos *</span>
+            <select id="uc-country" class="form-control">
+                <option value="">Select country</option>
+                {% for country in countries %}
+                <option value="{{ country }}">{{ country }}</option>
+                {% endfor %}
+                <option value="__NEW__">+ Add country…</option>
+            </select>
+        </label>
+        <div class="uc-field">
+            <span class="uc-field-label">Date</span>
+            <div class="uc-segmented" role="group" aria-label="Date source">
+                <button type="button" class="active" data-date-mode="photo">From each photo</button>
+                <button type="button" data-date-mode="same">Same date for all</button>
             </div>
-
-            <!-- Selected Files Preview -->
-            <div class="upload-queue" id="upload-queue" style="display: none;">
-                <h4>Selected Files</h4>
-                <div class="file-list" id="file-list">
-                    <!-- File items will appear here -->
-                </div>
+            <input type="date" id="uc-batch-date" class="form-control" aria-label="Date for all photos" hidden>
+        </div>
+        <div class="uc-field">
+            <span class="uc-field-label">People in every photo</span>
+            <div class="uc-chips" id="uc-batch-people">
+                <button type="button" class="uc-chip-add" id="uc-batch-add-person">+ Add person to all</button>
             </div>
         </div>
-
-        <!-- Metadata Section -->
-        <div class="metadata-section">
-            <h4>Photo Information</h4>
-
-            <div class="form-row">
-                <div class="form-group">
-                        <label for="country" class="form-label">Country *</label>
-                        <select name="country-select" id="country-select" class="form-control" required>
-                            <option value="">Select Country</option>
-                            {% for country in countries %}
-                            <option value="{{ country }}">{{ country }}</option>
-                            {% endfor %}
-                            <option value="__NEW__">➕ Add Country</option>
-                        </select>
-                        <input type="text" name="country" id="country-new" class="form-control" 
-                            placeholder="Enter new country name" style="display: none; margin-top: 10px;">
-                    </div>
-
-                <div class="form-group">
-                    <label for="date" class="form-label">Date Taken (Optional)</label>
-                    <input type="date" name="date" id="date" class="form-control">
-                    <small class="form-help">Leave empty to use current date</small>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">People in Photos (Optional)</label>
-                <div class="people-selection">
-                    <div class="people-search">
-                        <input type="text" class="form-control" placeholder="Search people..." id="people-search">
-                    </div>
-                    <div class="people-grid">
-                        {% for person in people %}
-                        <label class="person-checkbox">
-                            <input type="checkbox" name="people" value="{{ person[0] if person is sequence else person }}">
-                            <span class="checkbox-label">{{ person[0] if person is sequence else person }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+        {% if faces_enabled %}
+        <div class="uc-field">
+            <span class="uc-field-label">Suggestions</span>
+            <button type="button" class="btn btn--outline btn--sm" id="uc-keep-all">Keep all confident suggestions</button>
         </div>
+        {% endif %}
+    </section>
 
-        <!-- Upload Actions -->
-        <div class="upload-actions">
-            <button type="button" class="btn btn--outline" id="clear-files">Clear Files</button>
-            <button type="submit" class="btn btn--primary" id="upload-btn" disabled>
-                <span class="btn-text">Upload Photos</span>
-                <span class="btn-loader" style="display: none;">⏳ Uploading...</span>
-            </button>
+    <!-- Bulk actions for selected photos -->
+    <div class="uc-bulk" id="uc-bulk" role="region" aria-label="Bulk actions" hidden>
+        <strong id="uc-bulk-count">0 selected</strong>
+        <span class="uc-spacer"></span>
+        <button type="button" class="btn btn--outline btn--sm" data-bulk="date">Set date</button>
+        <button type="button" class="btn btn--outline btn--sm" data-bulk="country">Set country</button>
+        <button type="button" class="btn btn--outline btn--sm" data-bulk="person">+ Add person</button>
+        <button type="button" class="btn btn--outline btn--sm" data-bulk="remove">Remove from upload</button>
+        <button type="button" class="btn btn--sm uc-link" data-bulk="clear">Clear selection</button>
+    </div>
+
+    <div class="uc-grid" id="uc-grid"></div>
+
+    <div class="uc-footer" id="uc-footer" hidden>
+        <div class="uc-legend">
+            <span><i class="uc-swatch uc-swatch--suggested"></i>Suggested: click the name to keep it</span>
+            <span><i class="uc-swatch uc-swatch--kept"></i>Kept</span>
+            <span><i class="uc-swatch uc-swatch--unsure"></i>Unsure</span>
         </div>
-    </form>
-
-    <!-- Results Section -->
-    <div class="results-section" id="results-section" style="display: none;">
-        <h4>Upload Results</h4>
-        <div class="results-list" id="results-list">
-            <!-- Results will appear here -->
+        <div class="uc-footer-actions">
+            <button type="button" class="btn btn--outline" id="uc-clear">Clear all</button>
+            <button type="button" class="btn btn--primary" id="uc-upload">Upload</button>
         </div>
     </div>
 </div>
+
+<!-- Person picker, shared by every "add person" button -->
+<dialog class="uc-dialog" id="uc-person-dialog" aria-labelledby="uc-person-title">
+    <form method="dialog" class="uc-dialog-body">
+        <h3 id="uc-person-title">Who is this?</h3>
+        <input type="search" class="form-control" id="uc-person-search" placeholder="Search people…" autocomplete="off">
+        <div class="uc-person-list" id="uc-person-list"></div>
+        <div class="uc-dialog-actions">
+            <button type="submit" value="cancel" class="btn btn--outline btn--sm">Cancel</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Date / country prompt for bulk edits -->
+<dialog class="uc-dialog" id="uc-value-dialog" aria-labelledby="uc-value-title">
+    <form method="dialog" class="uc-dialog-body">
+        <h3 id="uc-value-title">Set date</h3>
+        <div id="uc-value-input"></div>
+        <div class="uc-dialog-actions">
+            <button type="submit" value="cancel" class="btn btn--outline btn--sm">Cancel</button>
+            <button type="submit" value="ok" class="btn btn--primary btn--sm">Apply</button>
+        </div>
+    </form>
+</dialog>
+
+<script id="uc-people-data" type="application/json">{{ people | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 {% endblock %}

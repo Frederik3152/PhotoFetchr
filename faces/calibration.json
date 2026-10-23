@@ -1,0 +1,12 @@
+{
+ "model": "insightface-buffalo_l",
+ "threshold": 0.35,
+ "logistic": {
+  "intercept": -1.7836,
+  "slope": 9.0645
+ },
+ "references": 1400,
+ "people": 21,
+ "method": "nearest reference per person, references from the same day excluded; likelihood = 1 / (1 + exp(-(intercept + slope * similarity)))",
+ "created": "2026-10-22T22:27:24+00:00"
+}

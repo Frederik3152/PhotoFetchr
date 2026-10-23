@@ -12,4 +12,11 @@ dependencies = [
     "requests>=2.32",
     "flask>=3.1",
     "gunicorn>=23",
+    "opencv-python-headless>=4.10",
 ]
+
+[tool.uv]
+# insightface depends on opencv-python, the build with GUI support, which needs X11/OpenGL
+# libraries a slim server image doesn't have. Nothing here opens a window, so use the
+# headless build instead (same `cv2` module).
+override-dependencies = ["opencv-python; sys_platform == 'never'"]

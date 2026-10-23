@@ -14,9 +14,9 @@ import threading
 from io import BytesIO
 
 from flask import Flask, jsonify, request
-from PIL import Image, ImageOps
+from PIL import Image
 
-from common import FACE_MODEL, connect, face_model, faces_in
+from common import FACE_MODEL, connect, face_model, faces_in, upright
 from suggest import assign, candidates, likelihood, load_calibration
 
 # Below this calibrated likelihood a suggestion is shown as unsure ("Ida?").
@@ -35,7 +35,7 @@ def read_image():
         return None
     img = Image.open(BytesIO(file.read()))
     img.draft("RGB", (1600, 1600))
-    img = ImageOps.exif_transpose(img).convert("RGB")
+    img = upright(img).convert("RGB")
     img.thumbnail((1600, 1600))
     return img
 

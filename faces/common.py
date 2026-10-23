@@ -7,9 +7,11 @@ import numpy as np
 import onnxruntime as ort
 import psycopg
 import requests
-from PIL import Image, ImageOps
+from PIL import Image
 
-# libpq service names or full DSNs. Prod is only ever read from.
+# libpq service names or full DSNs. PHOTOFETCHR_DSN is the database the face tables live
+# in: dev on the dev container, prod in the deployed container. PROD_DSN is only read
+# from, by subset.py when copying test data into dev.
 DEV_DSN = os.environ.get("PHOTOFETCHR_DSN", "service=homelab-dev")
 PROD_DSN = os.environ.get("PHOTOFETCHR_PROD_DSN", "service=homelab-prod")
 # Where to fetch originals when /photos isn't mounted locally (the dev container).
@@ -19,6 +21,23 @@ THREADS = int(os.environ.get("EMBED_THREADS", os.cpu_count() or 4))
 FACE_MODEL = "insightface-buffalo_l"
 
 ort.set_default_logger_severity(3)
+
+# EXIF orientation -> the transpose that turns the image upright. The same mapping as
+# Pillow's ImageOps.exif_transpose, which also rewrites the EXIF block and fails on photos
+# with out-of-range values in it; only the rotation is needed here.
+ORIENTATION = {2: Image.Transpose.FLIP_LEFT_RIGHT, 3: Image.Transpose.ROTATE_180,
+               4: Image.Transpose.FLIP_TOP_BOTTOM, 5: Image.Transpose.TRANSPOSE,
+               6: Image.Transpose.ROTATE_270, 7: Image.Transpose.TRANSVERSE,
+               8: Image.Transpose.ROTATE_90}
+
+
+def upright(img):
+    try:
+        method = ORIENTATION.get(img.getexif().get(0x0112, 1))
+    except Exception:
+        method = None
+    # FLIP_LEFT_RIGHT is 0, so compare with None rather than testing truthiness
+    return img.transpose(method) if method is not None else img
 
 
 def connect(dsn=DEV_DSN):
@@ -37,7 +56,7 @@ def load_image(picture_id, file_path, max_side=1600):
         r.raise_for_status()
         img = Image.open(BytesIO(r.content))
     img.draft("RGB", (max_side, max_side))  # lets the JPEG decoder skip full resolution
-    img = ImageOps.exif_transpose(img).convert("RGB")
+    img = upright(img).convert("RGB")
     img.thumbnail((max_side, max_side))
     return img
 

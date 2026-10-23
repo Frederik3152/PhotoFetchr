@@ -116,25 +116,42 @@ docker compose build faces
 
 ## 4. Build the reference set from the originals
 
-Check that about 1.5 GB of memory is free (`free -m`), and run this inside `tmux` or
-`screen`: the scan reads all ~6,600 originals and takes roughly 30–60 minutes.
+Check that about 1.5 GB of memory is free (`free -m`, the *available* column). The scan
+reads all ~6,600 originals and takes roughly 30–60 minutes, so run it as a detached
+container that doesn't depend on your SSH session:
 
 ```sh
-docker compose run --rm faces python embed.py
+docker compose run -d --name faces-scan faces python embed.py
+docker logs -f faces-scan        # Ctrl+C stops watching, not the scan
+```
+
+It is done when the log ends with `peak memory:`. Photos it can't read are listed just
+before that, and tried again on the next run; `embed.py` can be stopped and started again
+and carries on where it left off. Then remove the finished container (keep its log first
+if you want it: `docker logs faces-scan > faces-scan.log`) and build the reference set:
+
+```sh
+docker rm faces-scan
 docker compose run --rm faces python references.py mark
 docker compose run --rm faces python references.py calibrate
 ```
 
-`embed.py` can be stopped and started again; it carries on where it left off. Photos it
-can't read are listed at the end and tried again on the next run.
+`docker rm` only deletes the stopped container and its log. The results are already in
+the database, and the image, the model and the calibration are kept.
 
 ## 5. Switch it on
 
+The faces service may already be running (the deploy's `docker compose up -d --build`
+starts every service), but it reads the calibration only when it starts, so restart it:
+
 ```sh
-docker compose up -d faces photofetchr
+docker compose restart faces
+docker compose up -d photofetchr     # recreates it if FACES_URL isn't applied yet
+docker compose exec faces cat /data/calibration.json
 docker compose exec photofetchr python -c "import requests; print(requests.get('http://faces:8901/health').json())"
 ```
 
+`calibration.json` should show today's `created` date and prod's number of references.
 The last line should print `{'model': 'insightface-buffalo_l', 'ok': True, 'threshold': ...}`.
 Upload a photo to check that people are suggested.
 

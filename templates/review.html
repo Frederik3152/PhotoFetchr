@@ -47,8 +47,12 @@
   <div class="rv-progress">
     {% for g in progress %}
     <div>
+      {% if g.left is defined %}
+      <span>{{ g.name }}: {{ g.left }}</span>
+      {% else %}
       <span>{{ g.name }}: {{ g.done }} of {{ g.total }}</span>
       <span class="rv-bar"><span style="width: {{ (100 * g.done / g.total) | round(1) if g.total else 0 }}%"></span></span>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -79,7 +83,7 @@
         <button type="submit" class="btn btn--primary">Save and next</button>
         <button type="button" class="btn btn--outline" id="rv-skip">Skip for now</button>
       </div>
-      <div class="rv-hint">Enter saves. Pick "Nobody to tag" for strangers. Naming someone who isn't tagged on the photo adds the tag.</div>
+      <div class="rv-hint">Enter saves. Pick "Nobody to tag" for strangers. Naming someone who isn't tagged on the photo adds the tag.{% if photo.misc %} Saving removes the Misc. Friends tag; "Skip for now" leaves the photo as it is.{% endif %}</div>
     </form>
   </div>
   {% endif %}
@@ -127,7 +131,8 @@
           <span class="rv-known">${esc(nameOf(f.person_id))} (already known)</span></div>`;
       }
       const chosen = choice[f.id];
-      const note = chosen && !tagged.has(chosen) ? '<div class="rv-note">adds this person\'s tag to the photo</div>' : '';
+      const note = (f.was_misc ? '<div class="rv-known">was Misc. Friends</div>' : '')
+        + (chosen && !tagged.has(chosen) ? '<div class="rv-note">adds this person\'s tag to the photo</div>' : '');
       return `<div class="rv-face" data-face="${f.id}"><span class="rv-num">${i + 1}</span>
         <div style="flex:1 1 auto"><select class="form-control" data-face="${f.id}" aria-label="Face ${i + 1}">${options(chosen)}</select>${note}</div></div>`;
     }).join('') || '<p class="rv-meta">No faces to review in this photo.</p>';
@@ -154,7 +159,7 @@
       error.textContent = 'The same person is chosen for two faces.';
       return;
     }
-    const res = await fetch(`{{ url_for('review.save', picture_id=photo.id) }}`, {
+    const res = await fetch(photo.save_url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(skip ? { skip: true } : { faces: choice }),
     });

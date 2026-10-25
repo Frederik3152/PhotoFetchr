@@ -346,7 +346,6 @@ dependencies = [
     { name = "opencv-python-headless" },
     { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
-    { name = "requests" },
 ]
 
 [package.metadata]
@@ -359,7 +358,6 @@ requires-dist = [
     { name = "opencv-python-headless", specifier = ">=4.10" },
     { name = "pillow", specifier = ">=10.4" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
-    { name = "requests", specifier = ">=2.32" },
 ]
 
 [[package]]

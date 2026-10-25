@@ -2,8 +2,7 @@
 
     uv run embed.py [--limit N]
 
-Needs about 750 MB of memory. On the dev container run it under a memory cap, see
-~/.claude/CLAUDE.md.
+Reads the originals from /photos and needs about 750 MB of memory.
 """
 import argparse
 import resource
@@ -33,8 +32,8 @@ def main():
             # A photo that can't be read is skipped without a face_scans row, so the next
             # run tries it again.
             try:
-                with timer("fetch + decode"):
-                    img = load_image(picture_id, file_path)
+                with timer("read + decode"):
+                    img = load_image(file_path)
             except Exception as e:
                 failed.append(picture_id)
                 print(f"skipped picture {picture_id}: {e}", flush=True)

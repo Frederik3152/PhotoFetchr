@@ -1,21 +1,12 @@
 """Shared helpers: database connections, image loading and the face model."""
 import os
 import time
-from io import BytesIO
 
 import numpy as np
 import onnxruntime as ort
 import psycopg
-import requests
 from PIL import Image
 
-# libpq service names or full DSNs. PHOTOFETCHR_DSN is the database the face tables live
-# in: dev on the dev container, prod in the deployed container. PROD_DSN is only read
-# from, by subset.py when copying test data into dev.
-DEV_DSN = os.environ.get("PHOTOFETCHR_DSN", "service=homelab-dev")
-PROD_DSN = os.environ.get("PHOTOFETCHR_PROD_DSN", "service=homelab-prod")
-# Where to fetch originals when /photos isn't mounted locally (the dev container).
-PHOTOFETCHR_URL = os.environ.get("PHOTOFETCHR_URL", "http://192.168.8.92:5001")
 THREADS = int(os.environ.get("EMBED_THREADS", os.cpu_count() or 4))
 
 FACE_MODEL = "insightface-buffalo_l"
@@ -40,21 +31,14 @@ def upright(img):
     return img.transpose(method) if method is not None else img
 
 
-def connect(dsn=DEV_DSN):
-    return psycopg.connect(dsn)
+def connect():
+    """The database the face tables live in: PHOTOFETCHR_DSN, a libpq connection string."""
+    return psycopg.connect(os.environ["PHOTOFETCHR_DSN"])
 
 
-def load_image(picture_id, file_path, max_side=1600):
-    """Return the picture as an upright RGB PIL image, at most `max_side` px on its long edge.
-
-    Reads the file when the photo store is mounted here, otherwise asks PhotoFetchr for it.
-    """
-    if file_path and os.path.exists(file_path):
-        img = Image.open(file_path)
-    else:
-        r = requests.get(f"{PHOTOFETCHR_URL}/image/{picture_id}", timeout=60)
-        r.raise_for_status()
-        img = Image.open(BytesIO(r.content))
+def load_image(file_path, max_side=1600):
+    """Return the picture as an upright RGB PIL image, at most `max_side` px on its long edge."""
+    img = Image.open(file_path)
     img.draft("RGB", (max_side, max_side))  # lets the JPEG decoder skip full resolution
     img = upright(img).convert("RGB")
     img.thumbnail((max_side, max_side))

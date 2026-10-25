@@ -582,11 +582,5 @@ def add_photo_to_db(filename, data, country, person_ids, custom_date=None):
         return {'success': False, 'filename': filename, 'error': str(e)}
 
 
-# Temporary: the one-off review of faces in existing photos (review.py). Switched on with
-# ENABLE_FACE_REVIEW=1; delete review.py, templates/review.html and these lines when done.
-if os.environ.get('ENABLE_FACE_REVIEW'):
-    from review import review
-    app.register_blueprint(review)
-
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0")

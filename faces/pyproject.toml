@@ -9,7 +9,6 @@ dependencies = [
     "pillow>=10.4",
     "psycopg[binary]>=3.2",
     "numpy>=1.26",
-    "requests>=2.32",
     "flask>=3.1",
     "gunicorn>=23",
     "opencv-python-headless>=4.10",

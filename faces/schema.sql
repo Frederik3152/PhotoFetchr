@@ -2,7 +2,7 @@
 -- database's search_path includes (see services/postgresql.md in the homelab vault).
 
 -- Which pictures the face pass has seen, so a picture with no faces isn't scanned again.
--- `reviewed_at` is set when someone has gone through the photo's faces on the review page.
+-- `reviewed_at` was set by the one-off review of existing photos' faces (October 2026).
 CREATE TABLE IF NOT EXISTS photofetchr.face_scans (
     picture_id   integer     NOT NULL REFERENCES photofetchr.pictures(id) ON DELETE CASCADE,
     model        text        NOT NULL,

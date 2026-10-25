@@ -9,7 +9,6 @@ from imaging import upright
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
-import platform
 import threading
 import requests
 
@@ -303,16 +302,6 @@ def format_date(value):
         return value.strftime('%Y-%m-%d')
     return value
 
-@app.route('/api/people')
-def api_people():
-    """
-    Return list of people in json format for checkbox population
-    """
-    people = get_people()
-    # Convert tuple list to simple list of names
-    people_names = [person[0] if isinstance(person, tuple) else person for person in people]
-    return jsonify(people_names)
-
 def get_people():
     """
     Get unique names from the database
@@ -323,14 +312,6 @@ def get_people():
     people_list = cur.fetchall()
     conn.close()
     return people_list
-
-@app.route('/api/countries')
-def api_countries():
-    """
-    Return list of countries in json format for dropdown population
-    """
-    countries = get_country()
-    return jsonify(countries)
 
 def get_country():
     """
@@ -353,19 +334,11 @@ def get_image_from_filesystem(image_id):
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
-    if result and result[0]:
-        if platform.system() == 'Windows':
-            # Local Windows development
-            thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
-        else:
-            # Production (Linux/Docker) - use path as stored in database
-            thumbnail_path = result[0]
-        
-        # Check if file exists and return its contents
-        if os.path.exists(thumbnail_path):
-            with open(thumbnail_path, 'rb') as f:
-                return f.read()
+
+    # Return the file's contents if it exists
+    if result and result[0] and os.path.exists(result[0]):
+        with open(result[0], 'rb') as f:
+            return f.read()
 
 def get_thumbnail(image_id):
     """
@@ -378,18 +351,10 @@ def get_thumbnail(image_id):
     cur.close()
     conn.close()
 
-    if result and result[0]:
-        if platform.system() == 'Windows':
-            # Local Windows development
-            thumbnail_path = result[0].replace('/photos/', r'C:\Files\Projects\PhotoFetchr Migration\photos_migration\\')
-        else:
-            # Production (Linux/Docker) - use path as stored in database
-            thumbnail_path = result[0]
-        
-        # Check if file exists and return its contents
-        if os.path.exists(thumbnail_path):
-            with open(thumbnail_path, 'rb') as f:
-                return f.read()
+    # Return the file's contents if it exists
+    if result and result[0] and os.path.exists(result[0]):
+        with open(result[0], 'rb') as f:
+            return f.read()
     # Fallback to original if no thumbnail
     return get_image_from_filesystem(image_id)
 

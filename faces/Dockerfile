@@ -7,11 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 WORKDIR /faces
 RUN pip install --no-cache-dir uv==0.11.7
 COPY pyproject.toml uv.lock ./
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 RUN UV_PYTHON_DOWNLOADS=never uv sync --frozen --no-install-project --python /usr/local/bin/python3
 
 COPY *.py schema.sql calibration.json ./
 
-ENV PATH="/faces/.venv/bin:$PATH" \
+ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
 # The face model (~280 MB) is downloaded on first start into /root/.insightface;

@@ -1,5 +1,5 @@
 # Import libraries
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, send_file
 import psycopg2
 from PIL import Image
 from io import BytesIO
@@ -324,9 +324,9 @@ def get_country():
     conn.close()
     return country_list
 
-def get_image_from_filesystem(image_id):
+def get_image_path(image_id):
     """
-    Get image from filesystem instead of database
+    Path of the original image file, or None if it isn't there
     """
     conn = psycopg2.connect(**db_config)
     cur = conn.cursor()
@@ -335,9 +335,16 @@ def get_image_from_filesystem(image_id):
     cur.close()
     conn.close()
 
-    # Return the file's contents if it exists
     if result and result[0] and os.path.exists(result[0]):
-        with open(result[0], 'rb') as f:
+        return result[0]
+
+def get_image_from_filesystem(image_id):
+    """
+    Get image from filesystem instead of database
+    """
+    path = get_image_path(image_id)
+    if path:
+        with open(path, 'rb') as f:
             return f.read()
 
 def get_thumbnail(image_id):
@@ -372,11 +379,12 @@ def render_image(image_data):
 @app.route('/image/<int:image_id>')
 def show_image(image_id):
     """
-    Show image by ID
+    Show image by ID. The original file is sent as it is, so the browser applies its EXIF
+    rotation (re-encoding would drop it) and shows it at full quality.
     """
-    image_data = get_image_from_filesystem(image_id)
-    if image_data:
-        return render_image(image_data)
+    path = get_image_path(image_id)
+    if path:
+        return send_file(path)
     else:
         return "Image not found", 404
     
